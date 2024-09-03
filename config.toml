@@ -1,5 +1,1 @@
-[target.wasm32-unknown-unknown]
-rustflags = [
-    "-C", "target-feature=+multivalue",
-    "-C", "link-args=-z stack-size=10000000",
-]
+.cargo/config
