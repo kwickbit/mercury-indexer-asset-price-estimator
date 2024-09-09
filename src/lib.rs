@@ -1,8 +1,10 @@
-mod filter_transactions;
-mod logger;
+mod formatting;
+mod transaction;
+mod transaction_filter;
 mod utils;
 
-use zephyr_sdk::EnvClient;
+use transaction::InterestingTransaction;
+use zephyr_sdk::{EnvClient, EnvLogger};
 
 #[no_mangle]
 pub extern "C" fn on_close() {
@@ -15,23 +17,27 @@ pub extern "C" fn on_close() {
     let events = reader.envelopes_with_meta();
 
     // Process the data
-    let successful = filter_transactions::successful_usdc_txns(&events);
+    let interesting_transactions: Vec<InterestingTransaction> =
+        transaction_filter::interesting_transactions(&events);
 
     // Write to logs
     let env_logger = client.log();
-    let logger = logger::log(&env_logger);
+    let logger = create_logger(&env_logger);
 
-    if successful.is_empty() && sequence % 12 == 0 {
+    if interesting_transactions.is_empty() && sequence % 12 == 0 {
         logger(&format!("-- Sequence {} --", sequence));
     }
 
-    if !successful.is_empty() {
+    if !interesting_transactions.is_empty() {
         logger(&format!(
-            "Sequence {} has {} successful {} transactions:\n{}",
+            "Sequence {} has {} interesting transactions:\n{}",
             sequence,
-            successful.len(),
-            utils::ASSET,
-            logger::log_usdc_transactions(&successful),
+            interesting_transactions.len(),
+            formatting::format_interesting_transactions(&interesting_transactions),
         ));
     }
+}
+
+fn create_logger(env: &EnvLogger) -> impl Fn(&str) + '_ {
+    move |args| env.debug(args, None)
 }

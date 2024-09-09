@@ -1,28 +1,28 @@
 use zephyr_sdk::soroban_sdk::xdr::{
     AlphaNum4, Asset, OperationBody, PathPaymentStrictReceiveOp, PathPaymentStrictSendOp,
-    TransactionEnvelope, TransactionResultMeta, TransactionResultResult,
+    TransactionEnvelope, TransactionResultMeta,
 };
 
-use crate::utils::{transaction_operations, ASSET};
+use crate::transaction::InterestingTransaction;
+use crate::utils::ASSET;
 
-pub fn successful_usdc_txns<'a>(
-    events: &[(&'a TransactionEnvelope, &TransactionResultMeta)],
-) -> Vec<&'a TransactionEnvelope> {
-    events.iter().filter_map(is_successful_usdc_txn).collect()
-}
-
-fn is_successful_usdc_txn<'a>(
-    (envelope, result_meta): &(&'a TransactionEnvelope, &TransactionResultMeta),
-) -> Option<&'a TransactionEnvelope> {
-    if is_usdc(envelope) && is_successful(result_meta) {
-        Some(envelope)
-    } else {
-        None
-    }
+pub fn interesting_transactions<'a>(
+    events: &[(&'a TransactionEnvelope, &'a TransactionResultMeta)],
+) -> Vec<InterestingTransaction<'a>> {
+    events
+        .iter()
+        .filter_map(|(envelope, result_meta)| {
+            if is_usdc(envelope) {
+                Some(InterestingTransaction::new(envelope, result_meta))
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 fn is_usdc(transaction: &TransactionEnvelope) -> bool {
-    let operations = transaction_operations(transaction);
+    let operations = crate::utils::extract_transaction_operations(transaction);
 
     if operations.is_empty() {
         return false;
@@ -41,13 +41,6 @@ fn is_usdc(transaction: &TransactionEnvelope) -> bool {
         }) => asset_matches(send_asset, ASSET) || asset_matches(dest_asset, ASSET),
         _ => false,
     })
-}
-
-fn is_successful(result_meta: &TransactionResultMeta) -> bool {
-    matches!(
-        result_meta.result.result.result,
-        TransactionResultResult::TxSuccess(_)
-    )
 }
 
 fn asset_matches(asset: &AlphaNum4, code: &str) -> bool {
