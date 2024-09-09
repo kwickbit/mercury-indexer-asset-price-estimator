@@ -24,17 +24,17 @@ pub extern "C" fn on_close() {
     let env_logger = client.log();
     let logger = create_logger(&env_logger);
 
-    if interesting_transactions.is_empty() && sequence % 12 == 0 {
-        logger(&format!("-- Sequence {} --", sequence));
-    }
+    if interesting_transactions.is_empty() {
+        if sequence % 12 == 0 {
+            logger(&format!("-- Sequence {} --", sequence));
+        }
+    } else {
+        let formatted_transactions =
+            formatting::format_interesting_transactions(&interesting_transactions);
 
-    if !interesting_transactions.is_empty() {
-        logger(&format!(
-            "Sequence {} has {} interesting transactions:\n{}",
-            sequence,
-            interesting_transactions.len(),
-            formatting::format_interesting_transactions(&interesting_transactions),
-        ));
+        formatted_transactions
+            .into_iter()
+            .for_each(|formatted_transaction| logger(&formatted_transaction));
     }
 }
 

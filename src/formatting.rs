@@ -8,7 +8,7 @@ use zephyr_sdk::soroban_sdk::xdr::{
 use crate::transaction::InterestingTransaction;
 use crate::utils;
 
-pub fn format_interesting_transactions(transactions: &[InterestingTransaction]) -> String {
+pub fn format_interesting_transactions(transactions: &[InterestingTransaction]) -> Vec<String> {
     transactions
         .iter()
         .enumerate()
@@ -22,19 +22,17 @@ fn format_interesting_transaction(
 ) -> String {
     let mut result = String::new();
 
-    result.push_str(&format!("Transaction #{}:\n", sequence_number));
+    result.push_str(&format!("Transaction #{}, ", sequence_number));
 
     for (op_index, operation) in transaction.operations.iter().enumerate() {
         result.push_str(&format!(
-            "Operation #{}.{}: ",
-            sequence_number,
+            "operation #{}: ",
             op_index + 1
         ));
         result.push_str(&format_operation_in_interesting_transaction(
             &operation.body,
             transaction.is_successful(),
         ));
-        result.push('\n');
     }
 
     result
@@ -48,12 +46,12 @@ fn format_operation_in_interesting_transaction(
         OperationBody::PathPaymentStrictReceive(PathPaymentStrictReceiveOp {
             send_asset,
             send_max,
-            destination,
             dest_asset,
             dest_amount,
             path,
+            ..
         }) => format!(
-            "Path payment (receive) to {destination}:\nmaximum send of {} {} to {} {}.\nPath: {}\nSuccessful: {is_successful}",
+            "Path payment (receive): -- maximum send of {} {} to {} {}. -- Path: {} -- Successful: {is_successful}",
             format_amount(send_max),
             format_asset(send_asset),
             format_amount(dest_amount),
@@ -63,12 +61,12 @@ fn format_operation_in_interesting_transaction(
         OperationBody::PathPaymentStrictSend(PathPaymentStrictSendOp {
             send_asset,
             send_amount,
-            destination,
             dest_asset,
             dest_min,
             path,
+            ..
         }) => format!(
-            "Path payment (send) to {destination}:\n{} {} to minimum of {} {}.\nPath: {}\nSuccessful: {is_successful}",
+            "Path payment (send): -- {} {} to minimum of {} {}. -- Path: {} -- Successful: {is_successful}",
             format_amount(send_amount),
             format_asset(send_asset),
             format_amount(dest_min),
