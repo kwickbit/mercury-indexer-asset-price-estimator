@@ -1,6 +1,6 @@
 use zephyr_sdk::soroban_sdk::xdr::{
     AlphaNum4, Asset, OperationBody, PathPaymentStrictReceiveOp, PathPaymentStrictSendOp,
-    PaymentOp, TransactionEnvelope, TransactionResultMeta, TransactionResultResult,
+    TransactionEnvelope, TransactionResultMeta, TransactionResultResult,
 };
 
 use crate::utils::{transaction_operations, ASSET};
@@ -29,10 +29,6 @@ fn is_usdc(transaction: &TransactionEnvelope) -> bool {
     }
 
     operations.iter().any(|op| match &op.body {
-        OperationBody::Payment(PaymentOp {
-            asset: Asset::CreditAlphanum4(asset),
-            ..
-        }) => asset_matches(asset, ASSET),
         OperationBody::PathPaymentStrictReceive(PathPaymentStrictReceiveOp {
             send_asset: Asset::CreditAlphanum4(send_asset),
             dest_asset: Asset::CreditAlphanum4(dest_asset),
