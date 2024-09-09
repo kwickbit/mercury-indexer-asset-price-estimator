@@ -33,14 +33,14 @@ fn format_usdc_transaction(transaction: &&TransactionEnvelope) -> String {
 
 fn fmt_op_in_usdc_txn(operation: &OperationBody) -> String {
     match &operation {
-        OperationBody::Payment(PaymentOp {
-            asset,
-            amount,
-            destination,
-        }) => format!(
-            "Payment of {amount} {} to {destination}",
-            format_asset(asset)
-        ),
+        /*
+        I probably don't need to worry about simple Payment operations,
+        since they don't involve asset exchanges.
+
+        PathPayments may exchange assets by means of Buy/Sell Offers, and/or with
+        interactions with liquidity pools, maybe. The Stella bot mentioned an
+        operation named LiquidityPoolTrade, which doesn't really seem to exist.
+        */
         OperationBody::PathPaymentStrictReceive(PathPaymentStrictReceiveOp {
             send_asset,
             send_max,
