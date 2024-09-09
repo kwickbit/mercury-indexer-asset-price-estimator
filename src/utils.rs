@@ -13,6 +13,6 @@ pub fn extract_transaction_operations(transaction: &TransactionEnvelope) -> VecM
 pub fn bytes_to_string(bytes: &[u8]) -> String {
     match std::str::from_utf8(bytes) {
         Ok(alpha) => alpha.to_string(),
-        Err(err) => err.to_string(),
+        Err(_) => "Unreadable".to_string(),
     }
 }
