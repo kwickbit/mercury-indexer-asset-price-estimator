@@ -29,12 +29,12 @@ pub extern "C" fn on_close() {
             logger(&format!("-- Sequence {} --", sequence));
         }
     } else {
-        let formatted_transactions =
-            formatting::format_interesting_transactions(&interesting_transactions);
-
-        formatted_transactions
-            .into_iter()
-            .for_each(|formatted_transaction| logger(&formatted_transaction));
+        for (index, transaction) in interesting_transactions.iter().enumerate() {
+            logger(&format!("Transaction #{}:", index + 1));
+            for rate in transaction.exchange_rates() {
+                logger(&format!("{}: ${:.6}", rate.asset, rate.usd_value));
+            }
+        }
     }
 }
 

@@ -1,4 +1,6 @@
-use zephyr_sdk::soroban_sdk::xdr::{Operation, TransactionEnvelope, VecM};
+use zephyr_sdk::soroban_sdk::xdr::{
+    AlphaNum12, AlphaNum4, Asset, Operation, TransactionEnvelope, VecM,
+};
 
 pub const ASSET: &str = "USDC";
 
@@ -15,4 +17,23 @@ pub fn bytes_to_string(bytes: &[u8]) -> String {
         Ok(alpha) => alpha.to_string(),
         Err(_) => "Unreadable".to_string(),
     }
+}
+
+pub fn format_asset(asset: &Asset) -> String {
+    match asset {
+        Asset::Native => "XLM".to_string(),
+        Asset::CreditAlphanum4(AlphaNum4 { asset_code, .. }) => {
+            format_nonnative_asset(asset_code.as_slice())
+        }
+        Asset::CreditAlphanum12(AlphaNum12 { asset_code, .. }) => {
+            format_nonnative_asset(asset_code.as_slice())
+        }
+    }
+}
+
+fn format_nonnative_asset(asset_code: &[u8]) -> String {
+    bytes_to_string(asset_code)
+        .chars()
+        .filter(|char| char.is_ascii_alphabetic())
+        .collect()
 }
