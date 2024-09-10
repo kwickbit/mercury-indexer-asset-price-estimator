@@ -1,12 +1,11 @@
 use num_format::{Locale, ToFormattedString};
 
 use zephyr_sdk::soroban_sdk::xdr::{
-    AlphaNum12, AlphaNum4, Asset, OperationBody, PathPaymentStrictReceiveOp,
-    PathPaymentStrictSendOp, VecM,
+    Asset, OperationBody, PathPaymentStrictReceiveOp, PathPaymentStrictSendOp, VecM,
 };
 
 use crate::transaction::InterestingTransaction;
-use crate::utils;
+use crate::utils::format_asset;
 
 pub fn format_interesting_transactions(transactions: &[InterestingTransaction]) -> Vec<String> {
     transactions
@@ -25,13 +24,10 @@ fn format_interesting_transaction(
     result.push_str(&format!("Transaction #{}, ", sequence_number));
 
     for (op_index, operation) in transaction.operations.iter().enumerate() {
-        result.push_str(&format!(
-            "operation #{}: ",
-            op_index + 1
-        ));
+        result.push_str(&format!("operation #{}: ", op_index + 1));
         result.push_str(&format_operation_in_interesting_transaction(
             &operation.body,
-            transaction.is_successful(),
+            true,
         ));
     }
 
@@ -95,23 +91,4 @@ fn format_path(send_asset: &Asset, path: &VecM<Asset, 5>, dest_asset: &Asset) ->
             .join(" => "),
         format_asset(dest_asset)
     )
-}
-
-fn format_asset(asset: &Asset) -> String {
-    match asset {
-        Asset::Native => "XLM".to_string(),
-        Asset::CreditAlphanum4(AlphaNum4 { asset_code, .. }) => {
-            format_nonnative_asset(asset_code.as_slice())
-        }
-        Asset::CreditAlphanum12(AlphaNum12 { asset_code, .. }) => {
-            format_nonnative_asset(asset_code.as_slice())
-        }
-    }
-}
-
-fn format_nonnative_asset(asset_code: &[u8]) -> String {
-    utils::bytes_to_string(asset_code)
-        .chars()
-        .filter(|char| char.is_ascii_alphabetic())
-        .collect()
 }
