@@ -12,7 +12,7 @@ pub fn interesting_transactions<'a>(
     events
         .iter()
         .filter_map(|(envelope, result_meta)| {
-            if is_usdc(envelope) && is_successful(result_meta) {
+            if is_successful(result_meta) && is_usdc(envelope) {
                 Some(InterestingTransaction::new(envelope, result_meta))
             } else {
                 None
