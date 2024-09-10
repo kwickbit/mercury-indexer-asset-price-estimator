@@ -19,6 +19,19 @@ pub fn bytes_to_string(bytes: &[u8]) -> String {
     }
 }
 
+pub fn asset_matches(asset: &AlphaNum4, code: &str) -> bool {
+    asset.asset_code.as_slice() == code.as_bytes()
+}
+
+pub fn asset_is_usdc(asset: &Asset) -> bool {
+    match asset {
+        Asset::CreditAlphanum4(inner_asset) => {
+            asset_matches(inner_asset, ASSET)
+        }
+        _ => false,
+    }
+}
+
 pub fn format_asset(asset: &Asset) -> String {
     match asset {
         Asset::Native => "XLM".to_string(),

@@ -1,10 +1,10 @@
 use zephyr_sdk::soroban_sdk::xdr::{
-    AlphaNum4, Asset, OperationBody, PathPaymentStrictReceiveOp, PathPaymentStrictSendOp,
-    TransactionEnvelope, TransactionResultMeta, TransactionResultResult,
+    Asset, OperationBody, PathPaymentStrictReceiveOp, PathPaymentStrictSendOp, TransactionEnvelope,
+    TransactionResultMeta, TransactionResultResult,
 };
 
 use crate::transaction::InterestingTransaction;
-use crate::utils::ASSET;
+use crate::utils::{asset_matches, ASSET};
 
 pub fn interesting_transactions<'a>(
     events: &[(&'a TransactionEnvelope, &'a TransactionResultMeta)],
@@ -19,13 +19,6 @@ pub fn interesting_transactions<'a>(
             }
         })
         .collect()
-}
-
-fn is_successful(result_meta: &TransactionResultMeta) -> bool {
-    matches!(
-        result_meta.result.result.result,
-        TransactionResultResult::TxSuccess(_)
-    )
 }
 
 fn is_usdc(transaction: &TransactionEnvelope) -> bool {
@@ -50,6 +43,9 @@ fn is_usdc(transaction: &TransactionEnvelope) -> bool {
     })
 }
 
-fn asset_matches(asset: &AlphaNum4, code: &str) -> bool {
-    asset.asset_code.as_slice() == code.as_bytes()
+fn is_successful(result_meta: &TransactionResultMeta) -> bool {
+    matches!(
+        result_meta.result.result.result,
+        TransactionResultResult::TxSuccess(_)
+    )
 }
