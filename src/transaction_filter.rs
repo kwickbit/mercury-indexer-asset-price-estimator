@@ -1,6 +1,6 @@
 use zephyr_sdk::soroban_sdk::xdr::{
     AlphaNum4, Asset, OperationBody, PathPaymentStrictReceiveOp, PathPaymentStrictSendOp,
-    TransactionEnvelope, TransactionResultMeta,
+    TransactionEnvelope, TransactionResultMeta, TransactionResultResult,
 };
 
 use crate::transaction::InterestingTransaction;
@@ -8,17 +8,24 @@ use crate::utils::ASSET;
 
 pub fn interesting_transactions<'a>(
     events: &[(&'a TransactionEnvelope, &'a TransactionResultMeta)],
-) -> Vec<InterestingTransaction<'a>> {
+) -> Vec<InterestingTransaction> {
     events
         .iter()
         .filter_map(|(envelope, result_meta)| {
-            if is_usdc(envelope) {
+            if is_usdc(envelope) && is_successful(result_meta) {
                 Some(InterestingTransaction::new(envelope, result_meta))
             } else {
                 None
             }
         })
         .collect()
+}
+
+fn is_successful(result_meta: &TransactionResultMeta) -> bool {
+    matches!(
+        result_meta.result.result.result,
+        TransactionResultResult::TxSuccess(_)
+    )
 }
 
 fn is_usdc(transaction: &TransactionEnvelope) -> bool {
