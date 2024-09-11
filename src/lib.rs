@@ -4,6 +4,7 @@ mod transaction;
 mod transaction_filter;
 mod utils;
 
+use formatting::format_interesting_transaction;
 use zephyr_sdk::{EnvClient, EnvLogger};
 
 #[no_mangle]
@@ -23,20 +24,25 @@ pub extern "C" fn on_close() {
     let env_logger = client.log();
     let logger = create_logger(&env_logger);
 
-    if interesting_transactions.is_empty() {
-        if sequence % 12 == 0 {
-            logger(&format!("-- Sequence {} --", sequence));
-        }
-    } else {
-        for (index, transaction) in interesting_transactions.iter().enumerate() {
-            let rates = transaction.exchange_rates();
-            if !rates.is_empty() {
-                logger(&format!("Transaction #{}: {:#?}", index + 1, transaction));
-                rates.into_iter().for_each(|rate| {
-                    logger(&format!("{}: ${:.6}", rate.asset, rate.usd_value));
-                });
-            }
-        }
+    if interesting_transactions.is_empty() && sequence % 12 == 0 {
+        logger(&format!("Sequence {}", sequence));
+    }
+
+    if !interesting_transactions.is_empty() {
+        interesting_transactions
+            .iter()
+            .enumerate()
+            .for_each(|(index, transaction)| {
+                logger(
+                    &format_interesting_transaction(sequence, transaction, index + 1).to_string(),
+                );
+                // let rates = transaction.exchange_rates(&client);
+                // if !rates.is_empty() {
+                //     rates.into_iter().for_each(|rate| {
+                //         logger(&format!("{}: ${:.6}", rate.asset, rate.usd_value));
+                //     });
+                // }
+            });
     }
 }
 

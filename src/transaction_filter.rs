@@ -32,13 +32,29 @@ fn is_usdc(transaction: &TransactionEnvelope) -> bool {
         OperationBody::PathPaymentStrictReceive(PathPaymentStrictReceiveOp {
             send_asset: Asset::CreditAlphanum4(send_asset),
             dest_asset: Asset::CreditAlphanum4(dest_asset),
+            path,
             ..
-        }) => asset_matches(send_asset, ASSET) || asset_matches(dest_asset, ASSET),
+        }) => {
+            asset_matches(send_asset, ASSET)
+                || asset_matches(dest_asset, ASSET)
+                || path.iter().any(|asset| match asset {
+                    Asset::CreditAlphanum4(inner_asset) => asset_matches(inner_asset, ASSET),
+                    _ => false,
+                })
+        }
         OperationBody::PathPaymentStrictSend(PathPaymentStrictSendOp {
             send_asset: Asset::CreditAlphanum4(send_asset),
             dest_asset: Asset::CreditAlphanum4(dest_asset),
+            path,
             ..
-        }) => asset_matches(send_asset, ASSET) || asset_matches(dest_asset, ASSET),
+        }) => {
+            asset_matches(send_asset, ASSET)
+                || asset_matches(dest_asset, ASSET)
+                || path.iter().any(|asset| match asset {
+                    Asset::CreditAlphanum4(inner_asset) => asset_matches(inner_asset, ASSET),
+                    _ => false,
+                })
+        }
         _ => false,
     })
 }
