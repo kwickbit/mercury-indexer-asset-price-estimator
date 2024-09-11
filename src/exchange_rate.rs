@@ -5,11 +5,14 @@ use zephyr_sdk::soroban_sdk::xdr::{
 
 use crate::utils;
 
+
+#[allow(dead_code)]
 pub struct ExchangeRate {
     pub asset: String,
     pub usd_value: f64,
 }
 
+#[allow(dead_code)]
 pub fn extract_exchange_rates(
     operation: &Operation,
     result: &OperationResult,

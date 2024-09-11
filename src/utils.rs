@@ -25,9 +25,7 @@ pub fn asset_matches(asset: &AlphaNum4, code: &str) -> bool {
 
 pub fn asset_is_usdc(asset: &Asset) -> bool {
     match asset {
-        Asset::CreditAlphanum4(inner_asset) => {
-            asset_matches(inner_asset, ASSET)
-        }
+        Asset::CreditAlphanum4(inner_asset) => asset_matches(inner_asset, ASSET),
         _ => false,
     }
 }
