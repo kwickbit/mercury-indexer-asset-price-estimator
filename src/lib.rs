@@ -4,7 +4,7 @@ mod transaction;
 mod transaction_filter;
 mod utils;
 
-use format::{format_interesting_transaction, format_offer};
+use format::format_claim_atom;
 use zephyr_sdk::{EnvClient, EnvLogger};
 
 #[no_mangle]
@@ -18,36 +18,23 @@ pub extern "C" fn on_close() {
     let events = reader.envelopes_with_meta();
 
     // Process the data
-    let interesting_transactions = transaction_filter::interesting_transactions(&events);
+    let claim_atoms = transaction_filter::get_claim_atoms(&events);
 
     // Write to logs
     let env_logger = client.log();
     let logger = create_logger(&env_logger);
 
-    if interesting_transactions.is_empty() && sequence % 12 == 0 {
+    if claim_atoms.is_empty() && sequence % 12 == 0 {
         logger(&format!("Sequence {}", sequence));
     }
 
-    if !interesting_transactions.is_empty() {
-        interesting_transactions
+    if !claim_atoms.is_empty() {
+        claim_atoms
             .iter()
             .enumerate()
-            .for_each(|(index, transaction)| {
-                logger(
-                    &format_interesting_transaction(
-                        sequence,
-                        transaction,
-                        index + 1,
-                        format_offer,
-                    )
-                    .to_string(),
-                );
-                // let rates = transaction.exchange_rates(&client);
-                // if !rates.is_empty() {
-                //     rates.into_iter().for_each(|rate| {
-                //         logger(&format!("{}: ${:.6}", rate.asset, rate.usd_value));
-                //     });
-                // }
+            .for_each(|(index, claim_atom)| {
+                logger(&format!("Claim #{}", index + 1));
+                logger(&format_claim_atom(claim_atom));
             });
     }
 }

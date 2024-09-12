@@ -1,12 +1,52 @@
 use zephyr_sdk::soroban_sdk::xdr::{
-    Asset, ManageBuyOfferResult, ManageSellOfferResult, Operation, OperationBody,
-    OperationResultTr, PathPaymentStrictReceiveOp, PathPaymentStrictSendOp, TransactionEnvelope,
-    TransactionResultMeta, TransactionResultResult,
+    Asset, ClaimAtom, ManageBuyOfferResult, ManageSellOfferResult, Operation, OperationBody, OperationResultTr, PathPaymentStrictReceiveOp, PathPaymentStrictSendOp, TransactionEnvelope, TransactionResultMeta, TransactionResultResult
 };
 
 use crate::transaction::InterestingTransaction;
-use crate::utils::{asset_matches, ASSET};
+use crate::utils::{asset_matches, extract_transaction_results, ASSET};
 
+#[allow(dead_code)]
+pub fn get_claim_atoms<'a>(
+    events: &[(&'a TransactionEnvelope, &'a TransactionResultMeta)],
+) -> Vec<ClaimAtom> {
+    let claim_atoms = Vec::new();
+
+    let _op_results = {
+        events
+            .iter()
+            .flat_map(|(_, result_meta)| extract_transaction_results(result_meta))
+            .collect::<Vec<OperationResultTr>>()
+    };
+
+    // op_results
+    //     .iter()
+    //     .filter_map(|op_result| {
+    //         match op_result {
+    //             OperationResultTr::PathPaymentStrictReceive(success) => {
+    //                 match success {
+    //                     PathPaymentStrictReceiveResult::Success => {
+    //                         claim_atoms.push(ClaimAtom::PathPaymentStrictReceive(
+    //                             PathPaymentStrictResult::Success {
+    //                                 amount_sold,
+    //                                 asset_sold,
+    //                                 amount_bought,
+    //                                 asset_bought,
+    //                             },
+    //                         ));
+    //                     }
+    //                     _ => {}
+    //                 }
+    //                 Some(ClaimAtom::PathPaymentStrictReceive(PathPaymentStrictResult::Success))
+    //             }
+    //             _ => None,
+    //         }
+    //         });
+
+
+    claim_atoms
+}
+
+#[allow(dead_code)]
 pub fn interesting_transactions<'a>(
     events: &[(&'a TransactionEnvelope, &'a TransactionResultMeta)],
 ) -> Vec<InterestingTransaction> {

@@ -12,6 +12,7 @@ use zephyr_sdk::soroban_sdk::xdr::{
 use crate::transaction::InterestingTransaction;
 use crate::utils::format_asset;
 
+#[allow(dead_code)]
 pub fn format_interesting_transaction(
     sequence: u32,
     transaction: &InterestingTransaction,
@@ -38,6 +39,7 @@ pub fn format_interesting_transaction(
     result
 }
 
+#[allow(dead_code)]
 pub fn format_offer(_operation: &OperationBody, op_result: &OperationResult) -> String {
     let mut result = "Offer result: ".to_string();
 
@@ -153,7 +155,7 @@ fn format_path(
     }
 }
 
-fn format_claim_atom(claim_atom: &ClaimAtom) -> String {
+pub fn format_claim_atom(claim_atom: &ClaimAtom) -> String {
     match claim_atom {
         ClaimAtom::V0(ClaimOfferAtomV0 {
             amount_sold,
