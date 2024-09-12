@@ -1,8 +1,9 @@
 use num_format::{Locale, ToFormattedString};
 
 use zephyr_sdk::soroban_sdk::xdr::{
-    Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, OperationBody,
-    OperationResult, OperationResultTr, PathPaymentStrictReceiveOp, PathPaymentStrictReceiveResult,
+    Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, ManageBuyOfferResult,
+    ManageSellOfferResult, OperationBody, OperationResult, OperationResultTr,
+    PathPaymentStrictReceiveOp, PathPaymentStrictReceiveResult,
     PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendOp, PathPaymentStrictSendResult,
     PathPaymentStrictSendResultSuccess, TransactionEnvelope, TransactionResultMeta,
     TransactionResultResult, VecM,
@@ -31,19 +32,39 @@ pub fn format_interesting_transaction(
         .enumerate()
         .for_each(|(op_index, (operation, op_result))| {
             result.push_str(&format!("operation #{}: ", op_index + 1));
-            result.push_str(&op_formatter(
-                &operation.body,
-                op_result,
-            ));
+            result.push_str(&op_formatter(&operation.body, op_result));
         });
 
     result
 }
 
-pub fn format_path_payment(
-    operation: &OperationBody,
-    result: &OperationResult,
-) -> String {
+pub fn format_offer(_operation: &OperationBody, op_result: &OperationResult) -> String {
+    let mut result = "Offer result: ".to_string();
+
+    let formatted_op_result = match op_result {
+        OperationResult::OpInner(result_tr) => match result_tr {
+            OperationResultTr::ManageSellOffer(ManageSellOfferResult::Success(success_result))
+            | OperationResultTr::ManageBuyOffer(ManageBuyOfferResult::Success(success_result))
+            | OperationResultTr::CreatePassiveSellOffer(ManageSellOfferResult::Success(
+                success_result,
+            )) => &success_result
+                .offers_claimed
+                .iter()
+                .map(format_claim_atom)
+                .collect::<Vec<String>>()
+                .join(" - "),
+            _ => "Unreachable non-Offer result",
+        },
+        _ => "Unreachable OpResult failure",
+    };
+
+    result.push_str(formatted_op_result);
+
+    result
+}
+
+#[allow(dead_code)]
+pub fn format_path_payment(operation: &OperationBody, result: &OperationResult) -> String {
     match operation {
         OperationBody::PathPaymentStrictReceive(PathPaymentStrictReceiveOp {
             send_asset,
@@ -121,35 +142,7 @@ fn format_path(
             offers
                 .to_vec()
                 .iter()
-                .for_each(|claim_atom| match claim_atom {
-                    ClaimAtom::V0(ClaimOfferAtomV0 {
-                        amount_sold,
-                        asset_sold,
-                        amount_bought,
-                        asset_bought,
-                        ..
-                    })
-                    | ClaimAtom::OrderBook(ClaimOfferAtom {
-                        amount_sold,
-                        asset_sold,
-                        amount_bought,
-                        asset_bought,
-                        ..
-                    })
-                    | ClaimAtom::LiquidityPool(ClaimLiquidityAtom {
-                        amount_sold,
-                        asset_sold,
-                        amount_bought,
-                        asset_bought,
-                        ..
-                    }) => result.push_str(&format!(
-                        "-- Sold {} {} for {} {}",
-                        format_amount(amount_sold),
-                        format_asset(asset_sold),
-                        format_amount(amount_bought),
-                        format_asset(asset_bought)
-                    )),
-                });
+                .for_each(|claim_atom| result.push_str(&format_claim_atom(claim_atom)));
 
             result
         }
@@ -160,8 +153,40 @@ fn format_path(
     }
 }
 
+fn format_claim_atom(claim_atom: &ClaimAtom) -> String {
+    match claim_atom {
+        ClaimAtom::V0(ClaimOfferAtomV0 {
+            amount_sold,
+            asset_sold,
+            amount_bought,
+            asset_bought,
+            ..
+        })
+        | ClaimAtom::OrderBook(ClaimOfferAtom {
+            amount_sold,
+            asset_sold,
+            amount_bought,
+            asset_bought,
+            ..
+        })
+        | ClaimAtom::LiquidityPool(ClaimLiquidityAtom {
+            amount_sold,
+            asset_sold,
+            amount_bought,
+            asset_bought,
+            ..
+        }) => format!(
+            "-- Sold {} {} for {} {}",
+            format_amount(amount_sold),
+            format_asset(asset_sold),
+            format_amount(amount_bought),
+            format_asset(asset_bought)
+        ),
+    }
+}
+
 #[allow(dead_code)]
-fn foo(
+fn report_transactions_by_success_and_path_payment(
     events: Vec<(&TransactionEnvelope, &TransactionResultMeta)>,
     logger: impl Fn(&str),
     sequence: u32,
