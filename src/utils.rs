@@ -1,5 +1,6 @@
 use zephyr_sdk::soroban_sdk::xdr::{
-    AlphaNum12, AlphaNum4, Asset, Operation, TransactionEnvelope, VecM,
+    AlphaNum12, AlphaNum4, Asset, Operation, OperationResult, OperationResultTr,
+    TransactionEnvelope, TransactionResultMeta, TransactionResultResult, VecM,
 };
 
 pub const ASSET: &str = "USDC";
@@ -8,6 +9,19 @@ pub fn extract_transaction_operations(transaction: &TransactionEnvelope) -> VecM
     match transaction {
         TransactionEnvelope::TxV0(envelope) => envelope.tx.operations.clone(),
         TransactionEnvelope::Tx(envelope) => envelope.tx.operations.clone(),
+        _ => Default::default(),
+    }
+}
+
+pub fn extract_transaction_results(result_meta: &TransactionResultMeta) -> Vec<OperationResultTr> {
+    match &result_meta.result.result.result {
+        TransactionResultResult::TxSuccess(op_results) => op_results
+            .iter()
+            .filter_map(|op_result| match op_result {
+                OperationResult::OpInner(inner_op_result) => Some(inner_op_result.clone()),
+                _ => None,
+            })
+            .collect(),
         _ => Default::default(),
     }
 }
