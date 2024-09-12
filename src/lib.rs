@@ -1,10 +1,10 @@
 mod exchange_rate;
-mod formatting;
+mod format;
 mod transaction;
 mod transaction_filter;
 mod utils;
 
-use formatting::format_interesting_transaction;
+use format::{format_interesting_transaction, format_path_payment};
 use zephyr_sdk::{EnvClient, EnvLogger};
 
 #[no_mangle]
@@ -34,7 +34,13 @@ pub extern "C" fn on_close() {
             .enumerate()
             .for_each(|(index, transaction)| {
                 logger(
-                    &format_interesting_transaction(sequence, transaction, index + 1).to_string(),
+                    &format_interesting_transaction(
+                        sequence,
+                        transaction,
+                        index + 1,
+                        format_path_payment,
+                    )
+                    .to_string(),
                 );
                 // let rates = transaction.exchange_rates(&client);
                 // if !rates.is_empty() {
