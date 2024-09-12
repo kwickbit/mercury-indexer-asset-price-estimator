@@ -4,7 +4,7 @@ mod transaction;
 mod transaction_filter;
 mod utils;
 
-use format::{format_interesting_transaction, format_path_payment};
+use format::{format_interesting_transaction, format_offer};
 use zephyr_sdk::{EnvClient, EnvLogger};
 
 #[no_mangle]
@@ -38,7 +38,7 @@ pub extern "C" fn on_close() {
                         sequence,
                         transaction,
                         index + 1,
-                        format_path_payment,
+                        format_offer,
                     )
                     .to_string(),
                 );
