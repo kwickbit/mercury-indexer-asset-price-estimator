@@ -15,6 +15,7 @@ pub fn format_interesting_transaction(
     sequence: u32,
     transaction: &InterestingTransaction,
     transaction_number: usize,
+    op_formatter: fn(&OperationBody, &OperationResult) -> String,
 ) -> String {
     let mut result = String::new();
 
@@ -30,7 +31,7 @@ pub fn format_interesting_transaction(
         .enumerate()
         .for_each(|(op_index, (operation, op_result))| {
             result.push_str(&format!("operation #{}: ", op_index + 1));
-            result.push_str(&format_operation_in_interesting_transaction(
+            result.push_str(&op_formatter(
                 &operation.body,
                 op_result,
             ));
@@ -39,7 +40,7 @@ pub fn format_interesting_transaction(
     result
 }
 
-fn format_operation_in_interesting_transaction(
+pub fn format_path_payment(
     operation: &OperationBody,
     result: &OperationResult,
 ) -> String {

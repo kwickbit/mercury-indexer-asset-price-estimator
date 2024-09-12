@@ -1,5 +1,6 @@
 use zephyr_sdk::soroban_sdk::xdr::{
-    Asset, OperationBody, PathPaymentStrictReceiveOp, PathPaymentStrictSendOp, TransactionEnvelope,
+    Asset, ManageBuyOfferResult, ManageSellOfferResult, Operation, OperationBody,
+    OperationResultTr, PathPaymentStrictReceiveOp, PathPaymentStrictSendOp, TransactionEnvelope,
     TransactionResultMeta, TransactionResultResult,
 };
 
@@ -12,7 +13,7 @@ pub fn interesting_transactions<'a>(
     events
         .iter()
         .filter_map(|(envelope, result_meta)| {
-            if is_successful(result_meta) && is_usdc(envelope) {
+            if is_successful(result_meta) && is_offer(result_meta) {
                 Some(InterestingTransaction::new(envelope, result_meta))
             } else {
                 None
@@ -21,14 +22,34 @@ pub fn interesting_transactions<'a>(
         .collect()
 }
 
-fn is_usdc(transaction: &TransactionEnvelope) -> bool {
+fn is_offer(result_meta: &TransactionResultMeta) -> bool {
+    let op_results = crate::utils::extract_transaction_results(result_meta);
+
+    op_results.iter().any(is_offer_op)
+}
+
+fn is_offer_op(op_result: &OperationResultTr) -> bool {
+    matches!(
+        op_result,
+        OperationResultTr::ManageSellOffer(ManageSellOfferResult::Success(_))
+            | OperationResultTr::ManageBuyOffer(ManageBuyOfferResult::Success(_))
+            | OperationResultTr::CreatePassiveSellOffer(ManageSellOfferResult::Success(_))
+    )
+}
+
+#[allow(dead_code)]
+fn is_usdc_path_payment(transaction: &TransactionEnvelope) -> bool {
     let operations = crate::utils::extract_transaction_operations(transaction);
 
     if operations.is_empty() {
         return false;
     }
 
-    operations.iter().any(|op| match &op.body {
+    operations.iter().any(is_usdc_path_payment_op)
+}
+
+fn is_usdc_path_payment_op(op: &Operation) -> bool {
+    match &op.body {
         OperationBody::PathPaymentStrictReceive(PathPaymentStrictReceiveOp {
             send_asset: Asset::CreditAlphanum4(send_asset),
             dest_asset: Asset::CreditAlphanum4(dest_asset),
@@ -56,7 +77,7 @@ fn is_usdc(transaction: &TransactionEnvelope) -> bool {
                 })
         }
         _ => false,
-    })
+    }
 }
 
 fn is_successful(result_meta: &TransactionResultMeta) -> bool {
