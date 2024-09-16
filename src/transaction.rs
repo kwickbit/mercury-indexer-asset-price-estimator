@@ -8,6 +8,7 @@ use crate::utils;
 
 #[derive(Debug)]
 pub struct InterestingTransaction {
+    pub hash: String,
     pub operations: Vec<Operation>,
     pub results: Vec<OperationResult>,
 }
@@ -20,6 +21,7 @@ impl InterestingTransaction {
             _ => unreachable!(),
         };
         Self {
+            hash: result_meta.result.transaction_hash.to_string(),
             operations: operations.to_vec(),
             results,
         }
