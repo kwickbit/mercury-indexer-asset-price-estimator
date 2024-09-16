@@ -8,5 +8,9 @@ name = "is_stored"
 col_type = "BYTEA"
 
 [[tables.columns]]
-name = "message"
+name = "envelope"
+col_type = "BYTEA"
+
+[[tables.columns]]
+name = "res_meta"
 col_type = "BYTEA"
