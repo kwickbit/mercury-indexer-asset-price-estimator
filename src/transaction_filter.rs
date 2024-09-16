@@ -53,7 +53,7 @@ pub fn interesting_transactions<'a>(
     events
         .iter()
         .filter_map(|(envelope, result_meta)| {
-            if is_successful(result_meta) && is_offer(result_meta) {
+            if is_successful(result_meta) && is_usdc_path_payment(envelope) {
                 Some(InterestingTransaction::new(envelope, result_meta))
             } else {
                 None
@@ -62,6 +62,7 @@ pub fn interesting_transactions<'a>(
         .collect()
 }
 
+#[allow(dead_code)]
 fn is_offer(result_meta: &TransactionResultMeta) -> bool {
     let op_results = crate::utils::extract_transaction_results(result_meta);
 
