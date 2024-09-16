@@ -1,11 +1,15 @@
-mod exchange_rate;
+mod config;
 mod format;
 mod transaction;
 mod transaction_filter;
 mod utils;
 
+use config::{FORCE_MILESTONE, MILESTONE_INTERVAL};
 use format::{format_interesting_transaction, format_path_payment};
-use zephyr_sdk::{EnvClient, EnvLogger};
+use zephyr_sdk::{
+    soroban_sdk::xdr::{TransactionEnvelope, TransactionResultMeta},
+    EnvClient, EnvLogger,
+};
 
 #[no_mangle]
 pub extern "C" fn on_close() {
@@ -15,7 +19,13 @@ pub extern "C" fn on_close() {
     // Collect the data we need
     let reader = client.reader();
     let sequence = reader.ledger_sequence();
-    let events = reader.envelopes_with_meta();
+    let envelopes = reader.envelopes();
+    let results = reader.tx_processing();
+
+    let events = envelopes
+        .into_iter()
+        .zip(results)
+        .collect::<Vec<(TransactionEnvelope, TransactionResultMeta)>>();
 
     // Process the data
     let interesting_transactions = transaction_filter::interesting_transactions(&events);
@@ -24,12 +34,18 @@ pub extern "C" fn on_close() {
     let env_logger = client.log();
     let logger = create_logger(&env_logger);
 
-    if interesting_transactions.is_empty() && sequence % 12 == 0 {
+    if sequence % MILESTONE_INTERVAL == 0
+        && (FORCE_MILESTONE || interesting_transactions.is_empty())
+    {
         logger(&format!("Sequence {}", sequence));
     }
 
     if !interesting_transactions.is_empty() {
-        logger(&format!("Sequence {} with {} transactions: ", sequence, interesting_transactions.len()));
+        logger(&format!(
+            "Sequence {} with {} transactions: ",
+            sequence,
+            interesting_transactions.len()
+        ));
         interesting_transactions
             .iter()
             .enumerate()
