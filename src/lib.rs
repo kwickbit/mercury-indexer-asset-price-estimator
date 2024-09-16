@@ -4,7 +4,7 @@ mod transaction;
 mod transaction_filter;
 mod utils;
 
-use format::{empty_formatter, format_interesting_transaction};
+use format::{format_interesting_transaction, format_path_payment};
 use zephyr_sdk::{EnvClient, EnvLogger};
 
 #[no_mangle]
@@ -29,6 +29,7 @@ pub extern "C" fn on_close() {
     }
 
     if !interesting_transactions.is_empty() {
+        logger(&format!("Sequence {} with {} transactions: ", sequence, interesting_transactions.len()));
         interesting_transactions
             .iter()
             .enumerate()
@@ -38,7 +39,7 @@ pub extern "C" fn on_close() {
                         sequence,
                         transaction,
                         index + 1,
-                        empty_formatter,
+                        format_path_payment,
                     )
                     .to_string(),
                 );
