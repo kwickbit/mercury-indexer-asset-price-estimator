@@ -47,8 +47,8 @@ pub fn get_claim_atoms<'a>(
 }
 
 #[allow(dead_code)]
-pub fn interesting_transactions<'a>(
-    events: &[(&'a TransactionEnvelope, &'a TransactionResultMeta)],
+pub fn interesting_transactions(
+    events: &[(TransactionEnvelope, TransactionResultMeta)],
 ) -> Vec<InterestingTransaction> {
     events
         .iter()

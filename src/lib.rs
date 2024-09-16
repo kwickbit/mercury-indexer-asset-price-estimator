@@ -4,7 +4,7 @@ mod transaction;
 mod transaction_filter;
 mod utils;
 
-use format::format_claim_atom;
+use format::{empty_formatter, format_interesting_transaction};
 use zephyr_sdk::{EnvClient, EnvLogger};
 
 #[no_mangle]
@@ -18,23 +18,30 @@ pub extern "C" fn on_close() {
     let events = reader.envelopes_with_meta();
 
     // Process the data
-    let claim_atoms = transaction_filter::get_claim_atoms(&events);
+    let interesting_transactions = transaction_filter::interesting_transactions(&events);
 
     // Write to logs
     let env_logger = client.log();
     let logger = create_logger(&env_logger);
 
-    if claim_atoms.is_empty() && sequence % 12 == 0 {
+    if interesting_transactions.is_empty() && sequence % 12 == 0 {
         logger(&format!("Sequence {}", sequence));
     }
 
-    if !claim_atoms.is_empty() {
-        claim_atoms
+    if !interesting_transactions.is_empty() {
+        interesting_transactions
             .iter()
             .enumerate()
-            .for_each(|(index, claim_atom)| {
-                logger(&format!("Claim #{}", index + 1));
-                logger(&format_claim_atom(claim_atom));
+            .for_each(|(index, transaction)| {
+                logger(
+                    &format_interesting_transaction(
+                        sequence,
+                        transaction,
+                        index + 1,
+                        empty_formatter,
+                    )
+                    .to_string(),
+                );
             });
     }
 }
