@@ -1,7 +1,12 @@
 use num_format::{Locale, ToFormattedString};
 
 use zephyr_sdk::soroban_sdk::xdr::{
-    Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, ManageBuyOfferResult, ManageOfferSuccessResultOffer, ManageSellOfferResult, OperationBody, OperationResult, OperationResultTr, PathPaymentStrictReceiveOp, PathPaymentStrictReceiveResult, PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendOp, PathPaymentStrictSendResult, PathPaymentStrictSendResultSuccess, TransactionEnvelope, TransactionResultMeta, TransactionResultResult, VecM
+    Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, ManageBuyOfferResult,
+    ManageOfferSuccessResultOffer, ManageSellOfferResult, OperationBody, OperationResult,
+    OperationResultTr, PathPaymentStrictReceiveOp, PathPaymentStrictReceiveResult,
+    PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendOp, PathPaymentStrictSendResult,
+    PathPaymentStrictSendResultSuccess, TransactionEnvelope, TransactionResultMeta,
+    TransactionResultResult, VecM,
 };
 
 use crate::transaction::InterestingTransaction;
@@ -66,7 +71,9 @@ pub fn format_offer(_operation: &OperationBody, op_result: &OperationResult) -> 
 }
 
 #[allow(dead_code)]
-pub fn format_path_payment(operation: &OperationBody, result: &OperationResult) -> String {
+pub fn format_path_payment(operation: &OperationBody, op_result: &OperationResult) -> String {
+    let mut result_str = "Path payment ".to_string();
+
     match operation {
         OperationBody::PathPaymentStrictReceive(PathPaymentStrictReceiveOp {
             send_asset,
@@ -75,14 +82,14 @@ pub fn format_path_payment(operation: &OperationBody, result: &OperationResult) 
             dest_amount,
             path,
             ..
-        }) => format!(
-            "Path payment (receive): maximum send of {} {} to {} {}. Path: {}",
+        }) => result_str.push_str(&format!(
+            "(receive): maximum send of {} {} to {} {}. Path: {}",
             format_amount(send_max),
             format_asset(send_asset),
             format_amount(dest_amount),
             format_asset(dest_asset),
-            format_path(send_asset, path, dest_asset, result),
-        ),
+            format_path(send_asset, path, dest_asset, op_result)
+        )),
         OperationBody::PathPaymentStrictSend(PathPaymentStrictSendOp {
             send_asset,
             send_amount,
@@ -90,16 +97,50 @@ pub fn format_path_payment(operation: &OperationBody, result: &OperationResult) 
             dest_min,
             path,
             ..
-        }) => format!(
-            "Path payment (send): {} {} to minimum of {} {}. Path: {}",
+        }) => result_str.push_str(&format!(
+            "(send): {} {} to minimum of {} {}. Path: {}",
             format_amount(send_amount),
             format_asset(send_asset),
             format_amount(dest_min),
             format_asset(dest_asset),
-            format_path(send_asset, path, dest_asset, result),
-        ),
+            format_path(send_asset, path, dest_asset, op_result)
+        )),
         _ => unreachable!("This case should never occur due to prior filtering"),
     }
+
+    match op_result {
+        OperationResult::OpInner(OperationResultTr::PathPaymentStrictReceive(
+            PathPaymentStrictReceiveResult::Success(PathPaymentStrictReceiveResultSuccess {
+                offers,
+                last,
+            }),
+        ))
+        | OperationResult::OpInner(OperationResultTr::PathPaymentStrictSend(
+            PathPaymentStrictSendResult::Success(PathPaymentStrictSendResultSuccess {
+                offers,
+                last,
+            }),
+        )) => result_str.push_str(&format!(
+            " // path payment result!! {} offers, last {:?}",
+            offers.len(),
+            last
+        )),
+        OperationResult::OpInner(OperationResultTr::ManageBuyOffer(
+            ManageBuyOfferResult::Success(offer_result),
+        ))
+        | OperationResult::OpInner(OperationResultTr::ManageSellOffer(
+            ManageSellOfferResult::Success(offer_result),
+        )) => {
+            result_str.push_str(&format!(
+                " // offer result: {}, with {} offers claimed.",
+                format_offer_result(&offer_result.offer),
+                offer_result.offers_claimed.len()
+            ));
+        }
+        _ => {}
+    }
+
+    result_str
 }
 
 fn format_amount(amount: &i64) -> String {
@@ -169,6 +210,18 @@ fn format_path(
                 .to_vec()
                 .iter()
                 .for_each(|claim_atom| result.push_str(&format_claim_atom(claim_atom)));
+        }
+        OperationResult::OpInner(OperationResultTr::ManageBuyOffer(
+            ManageBuyOfferResult::Success(offer_result),
+        ))
+        | OperationResult::OpInner(OperationResultTr::ManageSellOffer(
+            ManageSellOfferResult::Success(offer_result),
+        )) => {
+            result.push_str(&format!(
+                " // offer result: {}, with {} offers claimed.",
+                format_offer_result(&offer_result.offer),
+                offer_result.offers_claimed.len()
+            ));
         }
         _ => {
             result.push_str(&format!(" // {:?}", op_result));
