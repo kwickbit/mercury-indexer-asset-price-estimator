@@ -1,1 +1,12 @@
 name = "indexer"
+
+[[tables]]
+name = "storage"
+
+[[tables.columns]]
+name = "is_stored"
+col_type = "BYTEA"
+
+[[tables.columns]]
+name = "message"
+col_type = "BYTEA"
