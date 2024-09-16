@@ -22,8 +22,8 @@ pub fn format_interesting_transaction(
     let mut result = String::new();
 
     result.push_str(&format!(
-        "Sequence {}, transaction #{}, ",
-        sequence, transaction_number
+        "Sequence {}, transaction #{}, hash {}",
+        sequence, transaction_number, transaction.hash
     ));
 
     transaction
@@ -32,7 +32,7 @@ pub fn format_interesting_transaction(
         .zip(transaction.results.iter())
         .enumerate()
         .for_each(|(op_index, (operation, op_result))| {
-            result.push_str(&format!("operation #{}: ", op_index + 1));
+            result.push_str(&format!(" // operation #{}: ", op_index + 1));
             result.push_str(&op_formatter(&operation.body, op_result));
         });
 
@@ -139,7 +139,7 @@ fn format_path(
                 offers, ..
             }),
         )) => {
-            result.push_str(" // ");
+            result.push_str(" // path payment: ");
 
             offers
                 .to_vec()
