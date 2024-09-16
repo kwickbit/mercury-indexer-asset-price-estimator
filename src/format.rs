@@ -1,12 +1,7 @@
 use num_format::{Locale, ToFormattedString};
 
 use zephyr_sdk::soroban_sdk::xdr::{
-    Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, ManageBuyOfferResult,
-    ManageSellOfferResult, OperationBody, OperationResult, OperationResultTr,
-    PathPaymentStrictReceiveOp, PathPaymentStrictReceiveResult,
-    PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendOp, PathPaymentStrictSendResult,
-    PathPaymentStrictSendResultSuccess, TransactionEnvelope, TransactionResultMeta,
-    TransactionResultResult, VecM,
+    Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, ManageBuyOfferResult, ManageOfferSuccessResultOffer, ManageSellOfferResult, OperationBody, OperationResult, OperationResultTr, PathPaymentStrictReceiveOp, PathPaymentStrictReceiveResult, PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendOp, PathPaymentStrictSendResult, PathPaymentStrictSendResultSuccess, TransactionEnvelope, TransactionResultMeta, TransactionResultResult, VecM
 };
 
 use crate::transaction::InterestingTransaction;
@@ -37,6 +32,11 @@ pub fn format_interesting_transaction(
         });
 
     result
+}
+
+#[allow(dead_code)]
+pub fn empty_formatter(_operation: &OperationBody, _op_result: &OperationResult) -> String {
+    "".to_string()
 }
 
 #[allow(dead_code)]
@@ -110,6 +110,30 @@ fn format_amount(amount: &i64) -> String {
     format!("{}.{}", formatted_integer, fractional_amount)
 }
 
+fn format_offer_result(offer_result: &ManageOfferSuccessResultOffer) -> String {
+    let mut result = String::new();
+
+    match offer_result {
+        ManageOfferSuccessResultOffer::Created(offer) => result.push_str(&format!(
+            "created offer: {} {} for {} {}",
+            format_amount(&offer.amount),
+            format_asset(&offer.selling),
+            format_amount(&(offer.price.n as i64 / offer.price.d as i64)),
+            format_asset(&offer.buying)
+        )),
+        ManageOfferSuccessResultOffer::Updated(offer) => result.push_str(&format!(
+            "updated offer: {} {} for {} {}",
+            format_amount(&offer.amount),
+            format_asset(&offer.selling),
+            format_amount(&(offer.price.n as i64 / offer.price.d as i64)),
+            format_asset(&offer.buying)
+        )),
+        ManageOfferSuccessResultOffer::Deleted => result.push_str("deleted offer"),
+    }
+
+    result
+}
+
 fn format_path(
     send_asset: &Asset,
     path: &VecM<Asset, 5>,
@@ -145,14 +169,13 @@ fn format_path(
                 .to_vec()
                 .iter()
                 .for_each(|claim_atom| result.push_str(&format_claim_atom(claim_atom)));
-
-            result
         }
         _ => {
             result.push_str(&format!(" // {:?}", op_result));
-            result
         }
     }
+
+    result
 }
 
 pub fn format_claim_atom(claim_atom: &ClaimAtom) -> String {
