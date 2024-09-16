@@ -17,13 +17,14 @@ pub fn format_interesting_transaction(
     sequence: u32,
     transaction: &InterestingTransaction,
     transaction_number: usize,
+    transaction_count: usize,
     op_formatter: fn(&OperationBody, &OperationResult) -> String,
 ) -> String {
     let mut result = String::new();
 
     result.push_str(&format!(
-        "Sequence {}, transaction #{}, hash {}",
-        sequence, transaction_number, transaction.hash
+        "Sequence {} - transaction {}/{} ({})",
+        sequence, transaction_number, transaction_count, transaction.hash
     ));
 
     transaction
