@@ -33,13 +33,9 @@ pub fn bytes_to_string(bytes: &[u8]) -> String {
     }
 }
 
-pub fn asset_matches(asset: &AlphaNum4, code: &str) -> bool {
-    asset.asset_code.as_slice() == code.as_bytes()
-}
-
-pub fn asset_is_usdc(asset: &Asset) -> bool {
+pub fn asset_matches(asset: &Asset, code: &str) -> bool {
     match asset {
-        Asset::CreditAlphanum4(inner_asset) => asset_matches(inner_asset, ASSET),
+        Asset::CreditAlphanum4(inner_asset) => inner_asset.asset_code.as_slice() == code.as_bytes(),
         _ => false,
     }
 }
