@@ -11,3 +11,6 @@ pub const PRINT_TRANSACTION_DETAILS: bool = true;
 
 // Whether to interact with the DB at all
 pub const DO_DB_STUFF: bool = false;
+
+// When filtering, must the transactions be successful?
+pub const ALLOW_UNSUCCESSFUL_TRANSACTIONS: bool = false;
