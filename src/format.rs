@@ -2,40 +2,44 @@ use num_format::{Locale, ToFormattedString};
 
 use zephyr_sdk::soroban_sdk::xdr::{
     Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, ManageBuyOfferResult,
-    ManageOfferSuccessResultOffer, ManageSellOfferResult, OperationBody, OperationResult,
-    OperationResultTr, PathPaymentStrictReceiveOp, PathPaymentStrictReceiveResult,
+    ManageOfferSuccessResult, ManageOfferSuccessResultOffer, ManageSellOfferResult, OperationBody,
+    OperationResult, OperationResultTr, PathPaymentStrictReceiveOp, PathPaymentStrictReceiveResult,
     PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendOp, PathPaymentStrictSendResult,
     PathPaymentStrictSendResultSuccess, TransactionEnvelope, TransactionResultMeta,
     TransactionResultResult, VecM,
 };
 
 use crate::transaction::InterestingTransaction;
-use crate::utils::format_asset;
+use crate::utils::{asset_matches, format_asset, ASSET};
 
 #[allow(dead_code)]
 pub fn format_interesting_transaction(
-    sequence: u32,
+    _sequence: u32,
     transaction: &InterestingTransaction,
-    transaction_number: usize,
-    transaction_count: usize,
+    _transaction_number: usize,
+    _transaction_count: usize,
     op_formatter: fn(&OperationBody, &OperationResult) -> String,
 ) -> String {
     let mut result = String::new();
 
-    result.push_str(&format!(
-        "Sequence {} - transaction {}/{} ({})",
-        sequence, transaction_number, transaction_count, transaction.hash
-    ));
-
-    transaction
+    let formatted_operations = transaction
         .operations
         .iter()
         .zip(transaction.results.iter())
-        .enumerate()
-        .for_each(|(op_index, (operation, op_result))| {
-            result.push_str(&format!(" // operation #{}: ", op_index + 1));
-            result.push_str(&op_formatter(&operation.body, op_result));
-        });
+        .map(|(operation, op_result)| {
+            let formatted_op = op_formatter(&operation.body, op_result);
+            if !formatted_op.is_empty() {
+                formatted_op
+            } else {
+                "".to_string()
+            }
+        })
+        .collect::<Vec<String>>()
+        .join("");
+
+    if !formatted_operations.is_empty() {
+        result.push_str(&formatted_operations);
+    }
 
     result
 }
@@ -47,28 +51,42 @@ pub fn empty_formatter(_operation: &OperationBody, _op_result: &OperationResult)
 
 #[allow(dead_code)]
 pub fn format_offer(_operation: &OperationBody, op_result: &OperationResult) -> String {
-    let mut result = "Offer result: ".to_string();
+    let mut result_str = String::new();
 
     let formatted_op_result = match op_result {
-        OperationResult::OpInner(result_tr) => match result_tr {
-            OperationResultTr::ManageSellOffer(ManageSellOfferResult::Success(success_result))
-            | OperationResultTr::ManageBuyOffer(ManageBuyOfferResult::Success(success_result))
-            | OperationResultTr::CreatePassiveSellOffer(ManageSellOfferResult::Success(
-                success_result,
-            )) => &success_result
-                .offers_claimed
-                .iter()
-                .map(format_claim_atom)
-                .collect::<Vec<String>>()
-                .join(" - "),
-            _ => "Unreachable non-Offer result",
-        },
-        _ => "Unreachable OpResult failure",
+        OperationResult::OpInner(OperationResultTr::ManageSellOffer(
+            ManageSellOfferResult::Success(success_result),
+        ))
+        | OperationResult::OpInner(OperationResultTr::ManageBuyOffer(
+            ManageBuyOfferResult::Success(success_result),
+        ))
+        | OperationResult::OpInner(OperationResultTr::CreatePassiveSellOffer(
+            ManageSellOfferResult::Success(success_result),
+        )) => {
+            let success_result_str = format_success_result(success_result);
+            if !success_result_str.is_empty() {
+                &success_result_str.clone()
+            } else {
+                ""
+            }
+        }
+        _ => "",
     };
 
-    result.push_str(formatted_op_result);
+    result_str.push_str(formatted_op_result);
 
-    result
+    result_str
+}
+
+fn format_success_result(success_result: &ManageOfferSuccessResult) -> String {
+    let mut result_str = "".to_string();
+    let offer_result = format_offer_result(&success_result.offer);
+
+    if !offer_result.is_empty() {
+        result_str.push_str(&offer_result);
+    }
+
+    result_str
 }
 
 #[allow(dead_code)]
@@ -153,27 +171,23 @@ fn format_amount(amount: &i64) -> String {
 }
 
 fn format_offer_result(offer_result: &ManageOfferSuccessResultOffer) -> String {
-    let mut result = String::new();
-
-    match offer_result {
-        ManageOfferSuccessResultOffer::Created(offer) => result.push_str(&format!(
-            "created offer: {} {} for {} {}",
-            format_amount(&offer.amount),
-            format_asset(&offer.selling),
-            format_amount(&(offer.price.n as i64 / offer.price.d as i64)),
-            format_asset(&offer.buying)
-        )),
-        ManageOfferSuccessResultOffer::Updated(offer) => result.push_str(&format!(
-            "updated offer: {} {} for {} {}",
-            format_amount(&offer.amount),
-            format_asset(&offer.selling),
-            format_amount(&(offer.price.n as i64 / offer.price.d as i64)),
-            format_asset(&offer.buying)
-        )),
-        ManageOfferSuccessResultOffer::Deleted => result.push_str("deleted offer"),
+    if let ManageOfferSuccessResultOffer::Created(offer)
+    | ManageOfferSuccessResultOffer::Updated(offer) = offer_result
+    {
+        if asset_matches(&offer.buying, ASSET) || asset_matches(&offer.selling, ASSET) {
+            format!(
+                "{} {} for {} at {}",
+                format_amount(&offer.amount),
+                format_asset(&offer.selling),
+                format_asset(&offer.buying),
+                offer.price.n as f32 / offer.price.d as f32,
+            )
+        } else {
+            "".to_string()
+        }
+    } else {
+        "".to_string()
     }
-
-    result
 }
 
 fn format_path(
@@ -255,7 +269,7 @@ pub fn format_claim_atom(claim_atom: &ClaimAtom) -> String {
             asset_bought,
             ..
         }) => format!(
-            "-- Sold {} {} for {} {}",
+            "-- Claim atom: sold {} {} for {} {}",
             format_amount(amount_sold),
             format_asset(asset_sold),
             format_amount(amount_bought),

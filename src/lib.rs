@@ -4,13 +4,17 @@ mod transaction;
 mod transaction_filter;
 mod utils;
 
-use config::{DO_DB_STUFF, FORCE_MILESTONE, MILESTONE_INTERVAL, PRINT_TRANSACTION_DETAILS};
-use format::{format_interesting_transaction, format_path_payment};
 use zephyr_sdk::{
     prelude::*,
-    soroban_sdk::xdr::{ScString, ScVal, TransactionEnvelope, TransactionResultMeta},
+    soroban_sdk::xdr::{
+        Operation, OperationResult, ScString, ScVal, TransactionEnvelope, TransactionResultMeta,
+    },
     DatabaseDerive, EnvClient, EnvLogger,
 };
+
+use config::{DO_DB_STUFF, FORCE_MILESTONE, MILESTONE_INTERVAL, PRINT_TRANSACTION_DETAILS};
+use format::{format_interesting_transaction, format_offer};
+use transaction_filter::{is_offer_result, is_usdc_op};
 
 #[derive(DatabaseDerive, Clone)]
 #[with_name("storage")]
@@ -48,7 +52,11 @@ pub extern "C" fn on_close() {
         .collect::<Vec<(&TransactionEnvelope, &TransactionResultMeta)>>();
 
     // Process the data
-    let interesting_transactions = transaction_filter::interesting_transactions(&events);
+    let interesting_transactions = transaction_filter::interesting_transactions(
+        &events,
+        Some(is_usdc_op),
+        Some(is_offer_result),
+    );
 
     // Write to logs
     let env_logger = client.log();
@@ -66,16 +74,17 @@ pub extern "C" fn on_close() {
                 .iter()
                 .enumerate()
                 .for_each(|(index, transaction)| {
-                    logger(
-                        &format_interesting_transaction(
-                            sequence,
-                            transaction,
-                            index + 1,
-                            interesting_transactions.len(),
-                            format_path_payment,
-                        )
-                        .to_string(),
+                    let formatted_transaction = format_interesting_transaction(
+                        sequence,
+                        transaction,
+                        index + 1,
+                        interesting_transactions.len(),
+                        format_offer,
                     );
+
+                    if !formatted_transaction.is_empty() {
+                        logger(&formatted_transaction);
+                    }
                 });
         } else {
             logger(&format!(
@@ -89,20 +98,15 @@ pub extern "C" fn on_close() {
         return;
     }
 
-    // Do DB stuff
-    let had_data = matches!(client.read::<StorageTable>().last(), Some(StorageTable { is_stored: ScVal::Bool(is_stored), .. }) if *is_stored);
-
-    if had_data {
-        logger("Found data, nothing to write");
-        return;
-    }
-
-    logger("Found no data, continuing...");
+    let (operations, results): (Vec<Operation>, Vec<OperationResult>) = interesting_transactions
+        .into_iter()
+        .flat_map(|tx| tx.operations.into_iter().zip(tx.results))
+        .unzip();
 
     let inner_envelope = format!(
-        "Sequence {sequence} had {} envelopes: {:#?}",
-        envelopes.len(),
-        envelopes
+        "Sequence {sequence} had {} operations: {:#?}",
+        operations.len(),
+        operations
     );
     let envelope = ScVal::String(ScString((&inner_envelope).try_into().unwrap()));
 
