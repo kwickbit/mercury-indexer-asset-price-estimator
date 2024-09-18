@@ -1,14 +1,14 @@
 use zephyr_sdk::soroban_sdk::xdr::{
     Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, ManageBuyOfferResult,
-    ManageOfferSuccessResult, ManageOfferSuccessResultOffer, ManageSellOfferResult, OperationBody,
-    OperationResult, OperationResultTr, PathPaymentStrictReceiveOp, PathPaymentStrictReceiveResult,
+    ManageOfferSuccessResultOffer, ManageSellOfferResult, OperationBody, OperationResult,
+    OperationResultTr, PathPaymentStrictReceiveOp, PathPaymentStrictReceiveResult,
     PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendOp, PathPaymentStrictSendResult,
     PathPaymentStrictSendResultSuccess, TransactionEnvelope, TransactionResultMeta,
     TransactionResultResult, VecM,
 };
 
 use crate::transaction::InterestingTransaction;
-use crate::utils::{asset_matches, format_asset, ASSET};
+use crate::utils::format_asset;
 
 #[allow(dead_code)]
 pub fn format_interesting_transaction(
@@ -18,28 +18,12 @@ pub fn format_interesting_transaction(
     _transaction_count: usize,
     op_formatter: fn(&OperationBody, &OperationResult) -> String,
 ) -> String {
-    let mut result = String::new();
-
-    let formatted_operations = transaction
+    transaction
         .operations
         .iter()
         .zip(transaction.results.iter())
-        .map(|(operation, op_result)| {
-            let formatted_op = op_formatter(&operation.body, op_result);
-            if !formatted_op.is_empty() {
-                formatted_op
-            } else {
-                "".to_string()
-            }
-        })
-        .collect::<Vec<String>>()
-        .join("");
-
-    if !formatted_operations.is_empty() {
-        result.push_str(&formatted_operations);
-    }
-
-    result
+        .map(|(operation, op_result)| op_formatter(&operation.body, op_result))
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -49,9 +33,7 @@ pub fn empty_formatter(_operation: &OperationBody, _op_result: &OperationResult)
 
 #[allow(dead_code)]
 pub fn format_offer(_operation: &OperationBody, op_result: &OperationResult) -> String {
-    let mut result_str = String::new();
-
-    let formatted_op_result = match op_result {
+    match op_result {
         OperationResult::OpInner(OperationResultTr::ManageSellOffer(
             ManageSellOfferResult::Success(success_result),
         ))
@@ -60,31 +42,9 @@ pub fn format_offer(_operation: &OperationBody, op_result: &OperationResult) -> 
         ))
         | OperationResult::OpInner(OperationResultTr::CreatePassiveSellOffer(
             ManageSellOfferResult::Success(success_result),
-        )) => {
-            let success_result_str = format_success_result(success_result);
-            if !success_result_str.is_empty() {
-                &success_result_str.clone()
-            } else {
-                ""
-            }
-        }
-        _ => "",
-    };
-
-    result_str.push_str(formatted_op_result);
-
-    result_str
-}
-
-fn format_success_result(success_result: &ManageOfferSuccessResult) -> String {
-    let mut result_str = "".to_string();
-    let offer_result = format_offer_result(&success_result.offer);
-
-    if !offer_result.is_empty() {
-        result_str.push_str(&offer_result);
+        )) => format_offer_result(&success_result.offer),
+        _ => String::new(),
     }
-
-    result_str
 }
 
 #[allow(dead_code)]
@@ -167,10 +127,9 @@ fn format_amount(amount: &i64) -> f64 {
 }
 
 fn format_offer_result(offer_result: &ManageOfferSuccessResultOffer) -> String {
-    if let ManageOfferSuccessResultOffer::Created(offer)
-    | ManageOfferSuccessResultOffer::Updated(offer) = offer_result
-    {
-        if asset_matches(&offer.buying, ASSET) || asset_matches(&offer.selling, ASSET) {
+    match offer_result {
+        ManageOfferSuccessResultOffer::Created(offer)
+        | ManageOfferSuccessResultOffer::Updated(offer) => {
             format!(
                 "{} {} for {} at {}",
                 format_amount(&offer.amount),
@@ -178,11 +137,8 @@ fn format_offer_result(offer_result: &ManageOfferSuccessResultOffer) -> String {
                 format_asset(&offer.buying),
                 offer.price.n as f32 / offer.price.d as f32,
             )
-        } else {
-            "".to_string()
         }
-    } else {
-        "".to_string()
+        _ => String::new(),
     }
 }
 

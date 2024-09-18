@@ -74,17 +74,13 @@ pub extern "C" fn on_close() {
                 .iter()
                 .enumerate()
                 .for_each(|(index, transaction)| {
-                    let formatted_transaction = format_interesting_transaction(
+                    logger(&format_interesting_transaction(
                         sequence,
                         transaction,
                         index + 1,
                         interesting_transactions.len(),
                         format_offer,
-                    );
-
-                    if !formatted_transaction.is_empty() {
-                        logger(&formatted_transaction);
-                    }
+                    ));
                 });
         } else {
             logger(&format!(
