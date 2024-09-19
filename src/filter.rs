@@ -27,6 +27,7 @@ fn build_swaps(transaction_result: &TransactionResultMeta) -> Option<Vec<Swap>> 
         Some(potential_swaps.into_iter().flatten().collect())
     }
 }
+
 fn build_swap(operation_result: &OperationResultTr) -> Option<Swap> {
     match operation_result {
         OperationResultTr::ManageSellOffer(ManageSellOfferResult::Success(offer_result))

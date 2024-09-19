@@ -1,37 +1,16 @@
 mod config;
-mod filter;
-mod swap;
-mod utils;
+// mod db;
+// mod filter;
+mod log;
+// mod swap;
+// mod utils;
 
-use zephyr_sdk::{
-    prelude::*,
-    soroban_sdk::xdr::{ScString, ScVal},
-    DatabaseDerive, EnvClient, EnvLogger,
-};
-
-use config::{DO_DB_STUFF, FORCE_MILESTONE, MILESTONE_INTERVAL, PRINT_TRANSACTION_DETAILS};
-use swap::format_swap;
-
-#[derive(DatabaseDerive, Clone)]
-#[with_name("storage")]
-struct StorageTable {
-    is_stored: ScVal,
-    envelope: ScVal,
-    res_meta: ScVal,
-}
-
-impl Default for StorageTable {
-    fn default() -> Self {
-        Self {
-            is_stored: ScVal::Bool(false),
-            envelope: ScVal::String(ScString("".try_into().unwrap())),
-            res_meta: ScVal::String(ScString("".try_into().unwrap())),
-        }
-    }
-}
+use zephyr_sdk::EnvClient;
+use config::DO_DB_STUFF;
+// use db::do_old_db_stuff;
+use log::log_milestone;
 
 #[no_mangle]
-#[allow(unreachable_code)]
 pub extern "C" fn on_close() {
     // The Zephyr client
     let client = EnvClient::new();
@@ -40,71 +19,16 @@ pub extern "C" fn on_close() {
     let reader = client.reader();
     let sequence = reader.ledger_sequence();
     let transaction_results = reader.tx_processing();
+    log_milestone(&client, sequence, transaction_results.len());
 
     // Process the data
-    let swaps = filter::swaps(transaction_results);
+    // let swaps = filter::swaps(transaction_results);
 
-    // Write to logs
-    let env_logger = client.log();
-    let logger = create_logger(&env_logger);
+    // let client_clone = client.clone();
+    // let _logger = log(&client_clone, sequence, &swaps);
 
-    if sequence % MILESTONE_INTERVAL == 0 && (FORCE_MILESTONE || swaps.is_empty()) {
-        logger(&format!("Sequence {}", sequence));
+    if DO_DB_STUFF {
+        // do_db_stuff(client, swaps);
+        // do_old_db_stuff(client, sequence, transaction_results.len());
     }
-
-    if !swaps.is_empty() {
-        if PRINT_TRANSACTION_DETAILS {
-            swaps.iter().for_each(|swap| {
-                logger(&format_swap(swap));
-            });
-        } else {
-            logger(&format!(
-                "Sequence {sequence} had {} interesting transactions",
-                swaps.len()
-            ));
-        }
-    }
-
-    if !DO_DB_STUFF {
-        todo!();
-    }
-
-    // let (operations, results): (Vec<Operation>, Vec<OperationResult>) = swaps
-    //     .into_iter()
-    //     .flat_map(|tx| tx.operations.into_iter().zip(tx.results))
-    //     .unzip();
-
-    // let inner_envelope = format!(
-    //     "Sequence {sequence} had {} operations: {:#?}",
-    //     operations.len(),
-    //     operations
-    // );
-    // let envelope = ScVal::String(ScString((&inner_envelope).try_into().unwrap()));
-
-    // logger("Successfully built envelope");
-
-    // let inner_res_meta = format!(
-    //     "Sequence {sequence} had {} results: {:#?}",
-    //     results.len(),
-    //     results.first()
-    // );
-
-    // logger(&format!("Inner result meta: {}", inner_res_meta));
-
-    // let res_meta = ScVal::String(ScString((&inner_res_meta).try_into().unwrap()));
-
-    // let table = StorageTable {
-    //     is_stored: ScVal::Bool(true),
-    //     envelope,
-    //     res_meta,
-    // };
-
-    // table.put(&client);
-    // logger(&format!(
-    //     "Should have written sequence {sequence} to the DB"
-    // ));
-}
-
-fn create_logger(env: &EnvLogger) -> impl Fn(&str) + '_ {
-    move |args| env.debug(args, None)
 }
