@@ -147,8 +147,10 @@ checksum = "a21f936df1771bf62b77f047b726c4625ff2e8aa607c01ec06e5a05bd8463401"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-targets",
 ]
 
@@ -538,6 +540,7 @@ checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 name = "indexer"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "zephyr-sdk",
 ]
 
@@ -1577,9 +1580,9 @@ dependencies = [
 
 [[package]]
 name = "zephyr-sdk"
-version = "0.2.2-rc4"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "045a0cfc356e9eca04288fd0d932b64c629fb48b39b8c99dfcceaaf144815680"
+checksum = "fd06506e3ed0fc18c3949958939c6bfe4deef6fb55e8858c48775c9605ac1665"
 dependencies = [
  "bincode",
  "charming-fork-zephyr",

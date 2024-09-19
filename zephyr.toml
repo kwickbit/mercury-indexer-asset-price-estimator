@@ -1,16 +1,28 @@
 name = "indexer"
 
 [[tables]]
-name = "storage"
+name = "swaps"
 
 [[tables.columns]]
-name = "is_stored"
+name = "created_at"
 col_type = "BYTEA"
 
 [[tables.columns]]
-name = "envelope"
+name = "stablecoin"
 col_type = "BYTEA"
 
 [[tables.columns]]
-name = "res_meta"
+name = "stablecoin_amount"
+col_type = "BYTEA"
+
+[[tables.columns]]
+name = "floating_asset"
+col_type = "BYTEA"
+
+[[tables.columns]]
+name = "price_numerator"
+col_type = "BYTEA"
+
+[[tables.columns]]
+name = "price_denominator"
 col_type = "BYTEA"
