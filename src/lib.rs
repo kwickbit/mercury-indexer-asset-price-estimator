@@ -1,20 +1,18 @@
 mod config;
 mod format;
+mod swap;
 mod transaction;
 mod transaction_filter;
 mod utils;
 
 use zephyr_sdk::{
     prelude::*,
-    soroban_sdk::xdr::{
-        Operation, OperationResult, ScString, ScVal, TransactionEnvelope, TransactionResultMeta,
-    },
+    soroban_sdk::xdr::{ScString, ScVal},
     DatabaseDerive, EnvClient, EnvLogger,
 };
 
 use config::{DO_DB_STUFF, FORCE_MILESTONE, MILESTONE_INTERVAL, PRINT_TRANSACTION_DETAILS};
-use format::{format_interesting_transaction, format_offer};
-use transaction_filter::{is_offer_result, is_usdc_op};
+use format::format_swap;
 
 #[derive(DatabaseDerive, Clone)]
 #[with_name("storage")]
@@ -43,91 +41,70 @@ pub extern "C" fn on_close() {
     // Collect the data we need
     let reader = client.reader();
     let sequence = reader.ledger_sequence();
-    let envelopes = &reader.envelopes();
-    let results = &reader.tx_processing();
-
-    let events = envelopes
-        .iter()
-        .zip(results)
-        .collect::<Vec<(&TransactionEnvelope, &TransactionResultMeta)>>();
+    let transaction_results = reader.tx_processing();
 
     // Process the data
-    let interesting_transactions = transaction_filter::interesting_transactions(
-        &events,
-        Some(is_usdc_op),
-        Some(is_offer_result),
-    );
+    let swaps = transaction_filter::swaps(transaction_results);
 
     // Write to logs
     let env_logger = client.log();
     let logger = create_logger(&env_logger);
 
-    if sequence % MILESTONE_INTERVAL == 0
-        && (FORCE_MILESTONE || interesting_transactions.is_empty())
-    {
+    if sequence % MILESTONE_INTERVAL == 0 && (FORCE_MILESTONE || swaps.is_empty()) {
         logger(&format!("Sequence {}", sequence));
     }
 
-    if !interesting_transactions.is_empty() {
+    if !swaps.is_empty() {
         if PRINT_TRANSACTION_DETAILS {
-            interesting_transactions
-                .iter()
-                .enumerate()
-                .for_each(|(index, transaction)| {
-                    logger(&format_interesting_transaction(
-                        sequence,
-                        transaction,
-                        index + 1,
-                        interesting_transactions.len(),
-                        format_offer,
-                    ));
-                });
+            swaps.iter().for_each(|swap| {
+                logger(&format_swap(swap));
+            });
         } else {
             logger(&format!(
                 "Sequence {sequence} had {} interesting transactions",
-                interesting_transactions.len()
+                swaps.len()
             ));
         }
     }
 
     if !DO_DB_STUFF {
-        return;
+        todo!();
     }
 
-    let (operations, results): (Vec<Operation>, Vec<OperationResult>) = interesting_transactions
-        .into_iter()
-        .flat_map(|tx| tx.operations.into_iter().zip(tx.results))
-        .unzip();
+    // let (operations, results): (Vec<Operation>, Vec<OperationResult>) = swaps
+    //     .into_iter()
+    //     .flat_map(|tx| tx.operations.into_iter().zip(tx.results))
+    //     .unzip();
 
-    let inner_envelope = format!(
-        "Sequence {sequence} had {} operations: {:#?}",
-        operations.len(),
-        operations
-    );
-    let envelope = ScVal::String(ScString((&inner_envelope).try_into().unwrap()));
+    // let inner_envelope = format!(
+    //     "Sequence {sequence} had {} operations: {:#?}",
+    //     operations.len(),
+    //     operations
+    // );
+    // let envelope = ScVal::String(ScString((&inner_envelope).try_into().unwrap()));
 
-    logger("Successfully built envelope");
+    // logger("Successfully built envelope");
 
-    let inner_res_meta = format!(
-        "Sequence {sequence} had {} results: {:#?}",
-        results.len(),
-        results.first()
-    );
+    // let inner_res_meta = format!(
+    //     "Sequence {sequence} had {} results: {:#?}",
+    //     results.len(),
+    //     results.first()
+    // );
 
-    logger(&format!("Inner result meta: {}", inner_res_meta));
+    // logger(&format!("Inner result meta: {}", inner_res_meta));
 
-    let res_meta = ScVal::String(ScString((&inner_res_meta).try_into().unwrap()));
+    // let res_meta = ScVal::String(ScString((&inner_res_meta).try_into().unwrap()));
 
-    let table = StorageTable {
-        is_stored: ScVal::Bool(true),
-        envelope,
-        res_meta,
-    };
+    // let table = StorageTable {
+    //     is_stored: ScVal::Bool(true),
+    //     envelope,
+    //     res_meta,
+    // };
 
-    table.put(&client);
-    logger(&format!(
-        "Should have written sequence {sequence} to the DB"
-    ));
+    // table.put(&client);
+    // logger(&format!(
+    //     "Should have written sequence {sequence} to the DB"
+    // ));
 }
 
 #[allow(dead_code)]

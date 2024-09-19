@@ -7,8 +7,19 @@ use zephyr_sdk::soroban_sdk::xdr::{
     TransactionResultResult, VecM,
 };
 
+use crate::swap::Swap;
 use crate::transaction::InterestingTransaction;
 use crate::utils::format_asset;
+
+pub fn format_swap(swap: &Swap) -> String {
+    format!(
+        "{} {} for {} at {}",
+        format_amount(&swap.stablecoin_amount),
+        swap.stablecoin,
+        swap.floating_asset,
+        swap.price_numerator as f32 / swap.price_denominator as f32,
+    )
+}
 
 #[allow(dead_code)]
 pub fn format_interesting_transaction(
