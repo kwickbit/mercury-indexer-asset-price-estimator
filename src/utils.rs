@@ -1,33 +1,9 @@
 use zephyr_sdk::soroban_sdk::xdr::{
-    AlphaNum12, AlphaNum4, Asset, Operation, OperationBody, OperationResult, OperationResultTr,
-    TransactionEnvelope, TransactionResultMeta, TransactionResultResult, VecM,
+    AlphaNum12, AlphaNum4, Asset, OperationResult, OperationResultTr, TransactionResultMeta,
+    TransactionResultResult,
 };
 
 use crate::config::STABLECOINS;
-
-#[allow(dead_code)]
-pub fn extract_transaction_operations_with_results(
-    event: &(&TransactionEnvelope, &TransactionResultMeta),
-) -> Vec<(OperationBody, OperationResultTr)> {
-    let &(envelope, result_meta) = event;
-    let operations = extract_transaction_operations(envelope);
-    let results = extract_transaction_results(result_meta);
-
-    operations
-        .to_vec()
-        .into_iter()
-        .zip(results.into_iter())
-        .map(|(op, res)| (op.body, res))
-        .collect()
-}
-
-pub fn extract_transaction_operations(transaction: &TransactionEnvelope) -> VecM<Operation, 100> {
-    match transaction {
-        TransactionEnvelope::TxV0(envelope) => envelope.tx.operations.clone(),
-        TransactionEnvelope::Tx(envelope) => envelope.tx.operations.clone(),
-        _ => Default::default(),
-    }
-}
 
 pub fn extract_transaction_results(result_meta: &TransactionResultMeta) -> Vec<OperationResultTr> {
     match &result_meta.result.result.result {
@@ -40,10 +16,6 @@ pub fn extract_transaction_results(result_meta: &TransactionResultMeta) -> Vec<O
             .collect(),
         _ => Default::default(),
     }
-}
-
-pub fn bytes_to_string(bytes: &[u8]) -> &str {
-    std::str::from_utf8(bytes).unwrap_or("Unreadable")
 }
 
 pub fn is_stablecoin(asset: &Asset) -> bool {
@@ -82,4 +54,8 @@ fn format_nonnative_asset(asset_code: &[u8]) -> String {
         .chars()
         .filter(|char| char.is_ascii_alphabetic())
         .collect()
+}
+
+fn bytes_to_string(bytes: &[u8]) -> &str {
+    std::str::from_utf8(bytes).unwrap_or("Unreadable")
 }

@@ -1,8 +1,6 @@
 mod config;
-mod format;
+mod filter;
 mod swap;
-mod transaction;
-mod transaction_filter;
 mod utils;
 
 use zephyr_sdk::{
@@ -12,7 +10,7 @@ use zephyr_sdk::{
 };
 
 use config::{DO_DB_STUFF, FORCE_MILESTONE, MILESTONE_INTERVAL, PRINT_TRANSACTION_DETAILS};
-use format::format_swap;
+use swap::format_swap;
 
 #[derive(DatabaseDerive, Clone)]
 #[with_name("storage")]
@@ -44,7 +42,7 @@ pub extern "C" fn on_close() {
     let transaction_results = reader.tx_processing();
 
     // Process the data
-    let swaps = transaction_filter::swaps(transaction_results);
+    let swaps = filter::swaps(transaction_results);
 
     // Write to logs
     let env_logger = client.log();
@@ -107,7 +105,6 @@ pub extern "C" fn on_close() {
     // ));
 }
 
-#[allow(dead_code)]
 fn create_logger(env: &EnvLogger) -> impl Fn(&str) + '_ {
     move |args| env.debug(args, None)
 }
