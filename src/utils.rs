@@ -1,9 +1,25 @@
 use zephyr_sdk::soroban_sdk::xdr::{
-    AlphaNum12, AlphaNum4, Asset, Operation, OperationResult, OperationResultTr,
+    AlphaNum12, AlphaNum4, Asset, Operation, OperationBody, OperationResult, OperationResultTr,
     TransactionEnvelope, TransactionResultMeta, TransactionResultResult, VecM,
 };
 
-pub const ASSET: &str = "USDC";
+use crate::config::STABLECOINS;
+
+#[allow(dead_code)]
+pub fn extract_transaction_operations_with_results(
+    event: &(&TransactionEnvelope, &TransactionResultMeta),
+) -> Vec<(OperationBody, OperationResultTr)> {
+    let &(envelope, result_meta) = event;
+    let operations = extract_transaction_operations(envelope);
+    let results = extract_transaction_results(result_meta);
+
+    operations
+        .to_vec()
+        .into_iter()
+        .zip(results.into_iter())
+        .map(|(op, res)| (op.body, res))
+        .collect()
+}
 
 pub fn extract_transaction_operations(transaction: &TransactionEnvelope) -> VecM<Operation, 100> {
     match transaction {
@@ -26,17 +42,26 @@ pub fn extract_transaction_results(result_meta: &TransactionResultMeta) -> Vec<O
     }
 }
 
-pub fn bytes_to_string(bytes: &[u8]) -> String {
-    match std::str::from_utf8(bytes) {
-        Ok(alpha) => alpha.to_string(),
-        Err(_) => "Unreadable".to_string(),
+pub fn bytes_to_string(bytes: &[u8]) -> &str {
+    std::str::from_utf8(bytes).unwrap_or("Unreadable")
+}
+
+pub fn is_stablecoin(asset: &Asset) -> bool {
+    match asset {
+        Asset::Native => false,
+        Asset::CreditAlphanum4(AlphaNum4 { asset_code, .. }) => {
+            compare_asset_code(asset_code.as_slice())
+        }
+        Asset::CreditAlphanum12(AlphaNum12 { asset_code, .. }) => {
+            compare_asset_code(asset_code.as_slice())
+        }
     }
 }
 
-pub fn asset_matches(asset: &Asset, code: &str) -> bool {
-    match asset {
-        Asset::CreditAlphanum4(inner_asset) => inner_asset.asset_code.as_slice() == code.as_bytes(),
-        _ => false,
+fn compare_asset_code(code: &[u8]) -> bool {
+    match std::str::from_utf8(code) {
+        Ok(str) => STABLECOINS.contains(&str.trim_end_matches('\0')),
+        Err(_) => false,
     }
 }
 
