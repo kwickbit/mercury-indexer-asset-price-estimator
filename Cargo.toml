@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-zephyr-sdk = { version = "0.2.2-rc4" }
+chrono = "0.4.23"
+zephyr-sdk = "0.2.3"
 
 [lib]
 crate-type = ["cdylib"]

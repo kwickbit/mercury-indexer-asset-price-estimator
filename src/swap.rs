@@ -1,3 +1,5 @@
+use crate::config::CONVERSION_FACTOR;
+
 #[derive(Debug)]
 pub struct Swap {
     pub stablecoin: String,
@@ -10,9 +12,9 @@ pub struct Swap {
 pub fn format_swap(swap: &Swap) -> String {
     format!(
         "{} {} for {} at {}",
-        swap.stablecoin_amount as f64 / 10_000_000.0,
+        swap.stablecoin_amount as f64 / CONVERSION_FACTOR,
         swap.stablecoin,
         swap.floating_asset,
-        swap.price_numerator as f32 / swap.price_denominator as f32,
+        swap.price_numerator as f64 / swap.price_denominator as f64,
     )
 }
