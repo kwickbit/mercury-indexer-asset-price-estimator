@@ -14,3 +14,6 @@ pub const DO_DB_STUFF: bool = false;
 
 // When filtering, must the transactions be successful?
 pub const ALLOW_UNSUCCESSFUL_TRANSACTIONS: bool = false;
+
+// The stablecoins we focus on
+pub const STABLECOINS: [&str; 3] = ["USDC", "USDT", "DAI"];
