@@ -7,7 +7,7 @@ BASE_DIR="$HOME/code/kwickbit"
 deploy_to_network() {
     local network=$1
     local jwt_var="${network^^}_JWT"  # Convert to uppercase for variable name
-    mercury-cli --jwt "${!jwt_var}" --local false --mainnet "$([[ $network == "mainnet" ]] && echo "true" || echo "false")" deploy
+    mercury-cli --jwt "${!jwt_var}" --local false --mainnet "$([[ $network == "mainnet" ]] && echo "true" || echo "false")" deploy $([[ $force_mode == true ]] && echo "--force true")
 }
 
 # Load environment variables
@@ -23,6 +23,7 @@ fi
 deploy_testnet=true
 deploy_mainnet=true
 reset_mode=false
+force_mode=false
 
 # Parse command line arguments
 for arg in "$@"
@@ -38,6 +39,9 @@ do
         ;;
         --reset)
         reset_mode=true
+        ;;
+        --force)
+        force_mode=true
         ;;
     esac
 done
