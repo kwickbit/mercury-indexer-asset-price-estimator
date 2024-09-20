@@ -7,24 +7,37 @@ use crate::config::ALLOW_UNSUCCESSFUL_TRANSACTIONS;
 use crate::swap::Swap;
 use crate::utils::{extract_transaction_results, format_asset, is_stablecoin};
 
-pub fn swaps(transaction_results: Vec<TransactionResultMeta>) -> Vec<Swap> {
-    transaction_results
+pub fn swaps(transaction_results: Vec<TransactionResultMeta>, logger: impl Fn(&str)) -> Vec<Swap> {
+    let result: Vec<Swap> = transaction_results
         .iter()
         .filter(|transaction_result| is_successful(transaction_result))
-        .filter_map(build_swaps)
+        .enumerate()
+        .filter_map(|(count, tr)| {
+            let swaps = build_swaps(tr, &logger);
+            if !swaps.clone()?.is_empty() {
+                logger(&format!(
+                    "Built {} swaps for transaction {}. The first swap is: {}",
+                    swaps.as_ref().unwrap().len(),
+                    count + 1,
+                    swaps.clone()?.first().unwrap()
+                ));
+            };
+            swaps
+        })
         .flatten()
-        .collect()
+        .collect();
+
+    logger(&format!("Processed into {} total swaps", result.len()));
+    result
 }
 
-fn build_swaps(transaction_result: &TransactionResultMeta) -> Option<Vec<Swap>> {
+fn build_swaps(
+    transaction_result: &TransactionResultMeta,
+    _logger: &impl Fn(&str),
+) -> Option<Vec<Swap>> {
     let operation_results = extract_transaction_results(transaction_result);
-    let potential_swaps: Vec<Option<Swap>> = operation_results.iter().map(build_swap).collect();
-
-    if potential_swaps.is_empty() {
-        None
-    } else {
-        Some(potential_swaps.into_iter().flatten().collect())
-    }
+    let potential_swaps: Vec<Swap> = operation_results.iter().filter_map(build_swap).collect();
+    (!potential_swaps.is_empty()).then_some(potential_swaps)
 }
 
 fn build_swap(operation_result: &OperationResultTr) -> Option<Swap> {
