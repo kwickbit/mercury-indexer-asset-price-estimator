@@ -1,6 +1,8 @@
+use std::fmt::Display;
+
 use crate::config::CONVERSION_FACTOR;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Swap {
     pub stablecoin: String,
     pub stablecoin_amount: i64,
@@ -9,12 +11,15 @@ pub struct Swap {
     pub price_denominator: i32,
 }
 
-pub fn format_swap(swap: &Swap) -> String {
-    format!(
-        "{} {} for {} at {}",
-        swap.stablecoin_amount as f64 / CONVERSION_FACTOR,
-        swap.stablecoin,
-        swap.floating_asset,
-        swap.price_numerator as f64 / swap.price_denominator as f64,
-    )
+impl Display for Swap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} {} for {} at {}",
+            self.stablecoin_amount as f64 / CONVERSION_FACTOR,
+            self.stablecoin,
+            self.floating_asset,
+            self.price_numerator as f64 / self.price_denominator as f64
+        )
+    }
 }
