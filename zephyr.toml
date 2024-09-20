@@ -2,27 +2,28 @@ name = "indexer"
 
 [[tables]]
 name = "swaps"
+force=true
 
 [[tables.columns]]
-name = "created_at"
+name = "creation"
 col_type = "BYTEA"
 
 [[tables.columns]]
-name = "stablecoin"
+name = "stable"
 col_type = "BYTEA"
 
 [[tables.columns]]
-name = "stablecoin_amount"
+name = "stableamt"
 col_type = "BYTEA"
 
 [[tables.columns]]
-name = "floating_asset"
+name = "floating"
 col_type = "BYTEA"
 
 [[tables.columns]]
-name = "price_numerator"
+name = "numerator"
 col_type = "BYTEA"
 
 [[tables.columns]]
-name = "price_denominator"
+name = "denom"
 col_type = "BYTEA"
