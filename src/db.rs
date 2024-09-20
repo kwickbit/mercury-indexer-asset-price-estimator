@@ -50,7 +50,7 @@ impl SwapDbRow {
 }
 
 pub fn do_db_stuff(client: EnvClient, swaps: Vec<Swap>) {
-    let timestamp = chrono::Utc::now().timestamp();
+    let timestamp = client.reader().ledger_timestamp();
     swaps.iter().for_each(|swap| {
         SwapDbRow::new(swap, timestamp).put(&client);
     });
