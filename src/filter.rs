@@ -18,7 +18,6 @@ pub fn swaps(transaction_results: Vec<TransactionResultMeta>) -> Vec<Swap> {
 
 fn build_swaps(transaction_result: &TransactionResultMeta) -> Option<Vec<Swap>> {
     let operation_results = extract_transaction_results(transaction_result);
-
     let potential_swaps: Vec<Option<Swap>> = operation_results.iter().map(build_swap).collect();
 
     if potential_swaps.is_empty() {
