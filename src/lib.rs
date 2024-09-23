@@ -16,7 +16,8 @@ pub extern "C" fn on_close() {
     let client = EnvClient::new();
 
     let rows = client.read::<SwapDbRow>();
-    let first_row: Swap = SwapDbRow::try_into(rows.first().unwrap().clone()).unwrap();
+    let first_row: Swap = rows.first().unwrap().into();
+
     client.log().debug(
         &format!("Found {} swaps. First one: {first_row}", rows.len()),
         None,
