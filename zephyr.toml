@@ -3,7 +3,6 @@ name = "indexer"
 # This table holds all the swaps involving our stablecoins of interest
 [[tables]]
 name = "swaps"
-force = true
 
 [[tables.columns]]
 name = "creation"

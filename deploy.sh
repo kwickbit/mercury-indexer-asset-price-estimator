@@ -6,7 +6,17 @@ BASE_DIR="$HOME/code/kwickbit"
 # Function to deploy to a specific network
 deploy_to_network() {
     local network=$1
-    local jwt_var="${network^^}_JWT"  # Convert to uppercase for variable name
+    local jwt_var="${network^^}_JWT"
+
+    if [ "$force_mode" = true ]; then
+        echo -e "\e[1;31mWarning: Force mode will destroy all data in the DB.\e[0m"
+        read -p "Type 'force' to confirm: " confirmation
+        if [ "$confirmation" != "force" ]; then
+            echo "Deployment aborted."
+            exit 1
+        fi
+    fi
+
     mercury-cli --jwt "${!jwt_var}" --local false --mainnet "$([[ $network == "mainnet" ]] && echo "true" || echo "false")" deploy $([[ $force_mode == true ]] && echo "--force true")
 }
 
