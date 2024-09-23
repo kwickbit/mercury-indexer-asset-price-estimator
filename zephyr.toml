@@ -17,7 +17,7 @@ col_type = "BYTEA"
 
 [[tables.columns]]
 name = "stableamt"
-# f64, amount of stablecoin
+# i64, amount of stablecoin in stroops (10^-7 stroops per unit)
 col_type = "BYTEA"
 
 [[tables.columns]]
