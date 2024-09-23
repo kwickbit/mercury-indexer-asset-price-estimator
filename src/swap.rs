@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use zephyr_sdk::soroban_sdk::xdr::{OfferEntry, ScVal};
+use zephyr_sdk::soroban_sdk::xdr::OfferEntry;
 
 use crate::{
     config::CONVERSION_FACTOR,
@@ -79,52 +79,16 @@ impl From<OfferEntry> for Swap {
     }
 }
 
-impl TryFrom<SwapDbRow> for Swap {
-    type Error = String;
-
-    fn try_from(row: SwapDbRow) -> Result<Self, Self::Error> {
-        let ScVal::I64(created_at) = row.creation else {
-            return Err("Invalid created_at value".to_string());
-        };
-
-        let ScVal::String(ref stablecoin) = row.stable else {
-            return Err("Invalid stablecoin value".to_string());
-        };
-
-        let stablecoin = stablecoin.to_string();
-
-        let ScVal::I64(stablecoin_amount) = row.stableamt else {
-            return Err("Invalid stablecoin_amount value".to_string());
-        };
-
-        let stablecoin_amount = stablecoin_amount as f64;
-
-        let ScVal::Bool(stablecoin_sold) = row.stbl_sold else {
-            return Err("Invalid stablecoin_sold value".to_string());
-        };
-
-        let ScVal::String(ref floating_asset) = row.floating else {
-            return Err("Invalid floating_asset value".to_string());
-        };
-
-        let floating_asset = floating_asset.to_string();
-
-        let ScVal::I32(price_numerator) = row.numerator else {
-            return Err("Invalid price_numerator value".to_string());
-        };
-
-        let ScVal::I32(price_denominator) = row.denom else {
-            return Err("Invalid price_denominator value".to_string());
-        };
-
-        Ok(Swap {
-            created_at: Some(created_at as u64),
-            stablecoin,
-            stablecoin_amount,
-            is_stablecoin_sale: stablecoin_sold,
-            floating_asset,
-            price_numerator,
-            price_denominator,
-        })
+impl From<&SwapDbRow> for Swap {
+    fn from(row: &SwapDbRow) -> Self {
+        Swap {
+            created_at: Some(row.creation),
+            stablecoin: row.stable.to_string(),
+            stablecoin_amount: row.stableamt as f64,
+            is_stablecoin_sale: row.stbl_sold == 1,
+            floating_asset: row.floating.to_string(),
+            price_numerator: row.numerator,
+            price_denominator: row.denom,
+        }
     }
 }
