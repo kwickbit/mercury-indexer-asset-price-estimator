@@ -8,14 +8,14 @@ use crate::swap::Swap;
 
 #[derive(DatabaseDerive, Clone)]
 #[with_name("swaps")]
-struct SwapDbRow {
-    creation: ScVal,
-    stable: ScVal,
-    stableamt: ScVal,
-    stbl_sold: ScVal,
-    floating: ScVal,
-    numerator: ScVal,
-    denom: ScVal,
+pub struct SwapDbRow {
+    pub creation: ScVal,
+    pub stable: ScVal,
+    pub stableamt: ScVal,
+    pub stbl_sold: ScVal,
+    pub floating: ScVal,
+    pub numerator: ScVal,
+    pub denom: ScVal,
 }
 
 impl SwapDbRow {
@@ -24,7 +24,7 @@ impl SwapDbRow {
             creation: ScVal::I64(timestamp.try_into().unwrap()),
             stable: ScVal::String(ScString(swap.stablecoin.clone().try_into().unwrap())),
             stableamt: ScVal::I64(swap.stablecoin_amount as i64),
-            stbl_sold: ScVal::Bool(swap.stablecoin_sold),
+            stbl_sold: ScVal::Bool(swap.is_stablecoin_sale),
             floating: ScVal::String(ScString(swap.floating_asset.clone().try_into().unwrap())),
             numerator: ScVal::I32(swap.price_numerator),
             denom: ScVal::I32(swap.price_denominator),
@@ -32,9 +32,9 @@ impl SwapDbRow {
     }
 }
 
-pub fn save_swaps(client: EnvClient, swaps: Vec<Swap>) {
+pub fn save_swaps(client: &EnvClient, swaps: &[Swap]) {
     let timestamp = client.reader().ledger_timestamp();
     swaps
         .iter()
-        .for_each(|swap| SwapDbRow::new(swap, timestamp).put(&client));
+        .for_each(|swap| SwapDbRow::new(swap, timestamp).put(client));
 }
