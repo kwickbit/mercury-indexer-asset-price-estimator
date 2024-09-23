@@ -4,28 +4,29 @@ mod filter;
 mod swap;
 mod utils;
 
+// Note to self: qualified imports mean things I am not currently using,
+// but are here because I will soon use.
+use db::SwapDbRow;
+use swap::Swap;
 use zephyr_sdk::{EnvClient, EnvLogger};
-use db::save_swaps;
 
 #[no_mangle]
 pub extern "C" fn on_close() {
     // The Zephyr client
     let client = EnvClient::new();
 
-    // Collect the data we need
-    let reader = client.reader();
-    let sequence = reader.ledger_sequence();
+    let rows = client.read::<SwapDbRow>();
+    let first_row: Swap = SwapDbRow::try_into(rows.first().unwrap().clone()).unwrap();
+    client.log().debug(
+        &format!("Found {} swaps. First one: {first_row}", rows.len()),
+        None,
+    );
 
-    // Process the data
-    let env_logger = client.log();
-    let logger = create_logger(&env_logger);
-    let swaps = filter::swaps(reader.tx_processing());
-    logger(&format!(
-        "In sequence {sequence}, processed {} swaps",
-        swaps.len()
-    ));
-
-    save_swaps(client, swaps);
+    if config::SAVE_SWAPS_TO_DATABASE {
+        let swaps = filter::swaps(client.reader().tx_processing());
+        db::save_swaps(&client, &swaps);
+        create_logger(&client.log())(&format!("Saved {} swaps to the database", swaps.len()));
+    }
 }
 
 fn create_logger(env: &EnvLogger) -> impl Fn(&str) + '_ {
