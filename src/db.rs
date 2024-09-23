@@ -1,6 +1,5 @@
 use zephyr_sdk::{
     prelude::*,
-    soroban_sdk::xdr::{ScString, ScVal},
     DatabaseDerive, EnvClient,
 };
 
@@ -9,25 +8,27 @@ use crate::swap::Swap;
 #[derive(DatabaseDerive, Clone)]
 #[with_name("swaps")]
 pub struct SwapDbRow {
-    pub creation: ScVal,
-    pub stable: ScVal,
-    pub stableamt: ScVal,
-    pub stbl_sold: ScVal,
-    pub floating: ScVal,
-    pub numerator: ScVal,
-    pub denom: ScVal,
+    pub creation: u64,
+    pub stable: String,
+    pub stableamt: i64,
+    // This is a stand-in for a boolean: 1 means the swap was a
+    // stablecoin sale, 0 means a purchase
+    pub stbl_sold: i8,
+    pub floating: String,
+    pub numerator: i32,
+    pub denom: i32,
 }
 
 impl SwapDbRow {
     fn new(swap: &Swap, timestamp: u64) -> Self {
         Self {
-            creation: ScVal::I64(timestamp.try_into().unwrap()),
-            stable: ScVal::String(ScString(swap.stablecoin.clone().try_into().unwrap())),
-            stableamt: ScVal::I64(swap.stablecoin_amount as i64),
-            stbl_sold: ScVal::Bool(swap.is_stablecoin_sale),
-            floating: ScVal::String(ScString(swap.floating_asset.clone().try_into().unwrap())),
-            numerator: ScVal::I32(swap.price_numerator),
-            denom: ScVal::I32(swap.price_denominator),
+            creation: timestamp,
+            stable: swap.stablecoin.clone(),
+            stableamt: swap.stablecoin_amount as i64,
+            stbl_sold: swap.is_stablecoin_sale as i8,
+            floating: swap.floating_asset.clone(),
+            numerator: swap.price_numerator,
+            denom: swap.price_denominator,
         }
     }
 }
