@@ -1,29 +1,42 @@
 name = "indexer"
 
+# This table holds all the swaps involving our stablecoins of interest
 [[tables]]
 name = "swaps"
-force=true
+force = true
 
 [[tables.columns]]
 name = "creation"
+# Timestamp taken from the ledger close time
 col_type = "BYTEA"
 
 [[tables.columns]]
 name = "stable"
+# String, code of the stablecoin
 col_type = "BYTEA"
 
 [[tables.columns]]
 name = "stableamt"
+# f64, amount of stablecoin
+col_type = "BYTEA"
+
+[[tables.columns]]
+name = "stbl_sold"
+# boolean, false if the stablecoin was bought
 col_type = "BYTEA"
 
 [[tables.columns]]
 name = "floating"
+# String, code of the floating coin
 col_type = "BYTEA"
 
+# The price is # of units of floating coin per unit of stablecoin
 [[tables.columns]]
 name = "numerator"
+# i32, the numerator of the price
 col_type = "BYTEA"
 
 [[tables.columns]]
 name = "denom"
+# i32, the denominator of the price
 col_type = "BYTEA"

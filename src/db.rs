@@ -12,6 +12,7 @@ struct SwapDbRow {
     creation: ScVal,
     stable: ScVal,
     stableamt: ScVal,
+    stbl_sold: ScVal,
     floating: ScVal,
     numerator: ScVal,
     denom: ScVal,
@@ -23,6 +24,7 @@ impl SwapDbRow {
             creation: ScVal::I64(timestamp.try_into().unwrap()),
             stable: ScVal::String(ScString(swap.stablecoin.clone().try_into().unwrap())),
             stableamt: ScVal::I64(swap.stablecoin_amount),
+            stbl_sold: ScVal::Bool(swap.stablecoin_sold),
             floating: ScVal::String(ScString(
                 swap.floating_asset.clone().try_into().unwrap(),
             )),

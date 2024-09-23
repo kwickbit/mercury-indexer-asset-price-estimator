@@ -18,14 +18,12 @@ pub extern "C" fn on_close() {
     // Collect the data we need
     let reader = client.reader();
     let sequence = reader.ledger_sequence();
-    let transaction_results = reader.tx_processing();
 
     // Process the data
     let env_logger = client.log();
     let logger = create_logger(&env_logger);
-    logger(&format!("==> Sequence {sequence}"));
-    let swaps = filter::swaps(transaction_results, &logger);
-    logger(&format!("--> Processed {} swaps", swaps.len()));
+    let swaps = filter::swaps(reader.tx_processing());
+    logger(&format!("In sequence {sequence}, processed {} swaps", swaps.len()));
 
     if DO_DB_STUFF {
         // do_db_stuff(client, swaps);
