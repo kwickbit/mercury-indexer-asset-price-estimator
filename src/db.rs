@@ -23,20 +23,18 @@ impl SwapDbRow {
         Self {
             creation: ScVal::I64(timestamp.try_into().unwrap()),
             stable: ScVal::String(ScString(swap.stablecoin.clone().try_into().unwrap())),
-            stableamt: ScVal::I64(swap.stablecoin_amount),
+            stableamt: ScVal::I64(swap.stablecoin_amount as i64),
             stbl_sold: ScVal::Bool(swap.stablecoin_sold),
-            floating: ScVal::String(ScString(
-                swap.floating_asset.clone().try_into().unwrap(),
-            )),
+            floating: ScVal::String(ScString(swap.floating_asset.clone().try_into().unwrap())),
             numerator: ScVal::I32(swap.price_numerator),
             denom: ScVal::I32(swap.price_denominator),
         }
     }
 }
 
-pub fn do_db_stuff(client: EnvClient, swaps: Vec<Swap>) {
+pub fn save_swaps(client: EnvClient, swaps: Vec<Swap>) {
     let timestamp = client.reader().ledger_timestamp();
-    swaps.iter().for_each(|swap| {
-        SwapDbRow::new(swap, timestamp).put(&client);
-    });
+    swaps
+        .iter()
+        .for_each(|swap| SwapDbRow::new(swap, timestamp).put(&client));
 }
