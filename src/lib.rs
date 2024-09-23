@@ -7,7 +7,6 @@ mod utils;
 // Note to self: qualified imports mean things I am not currently using,
 // but are here because I will soon use.
 use db::SwapDbRow;
-use swap::Swap;
 use zephyr_sdk::EnvClient;
 
 #[no_mangle]
@@ -15,14 +14,22 @@ pub extern "C" fn on_close() {
     // The Zephyr client
     let client = EnvClient::new();
     let logger = create_logger(&client);
-
     let rows = client.read::<SwapDbRow>();
-    let first_row: Swap = rows.first().unwrap().into();
 
-    logger(&format!(
-        "Found {} swaps. First one: {first_row}",
-        rows.len()
-    ));
+    let floatcoin_counts = rows
+        .iter()
+        .fold(std::collections::HashMap::new(), |mut counts, row| {
+            *counts.entry(&row.floating).or_insert(0) += 1;
+            counts
+        });
+
+    let log_message = floatcoin_counts
+        .iter()
+        .map(|(coin, count)| format!("{} {}", count, coin))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    logger(&format!("Found {} swaps. Counts by floatcoin: {}", rows.len(), log_message));
 
     if config::SAVE_SWAPS_TO_DATABASE {
         let swaps = filter::swaps(client.reader().tx_processing());
