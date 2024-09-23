@@ -71,4 +71,4 @@ if [ "$deploy_mainnet" = true ]; then
 fi
 
 cd "$BASE_DIR/indexer"
-echo "Deployment completed."
+echo -e "\e[30;47mDeployment completed at $(date)\e[0m"
