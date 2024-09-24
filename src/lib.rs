@@ -16,7 +16,7 @@ pub extern "C" fn on_close() {
     let logger = create_logger(&client);
     let exchange_rates = exchange_rate::calculate_exchange_rates(&client);
 
-    logger(&format!("Swap counts by floatcoin: {}", exchange_rates));
+    logger(&format!("Exchange rates by floatcoin: {}", exchange_rates));
 
     if config::SAVE_SWAPS_TO_DATABASE {
         let swaps = filter::swaps(client.reader().tx_processing());
