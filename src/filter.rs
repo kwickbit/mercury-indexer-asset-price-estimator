@@ -3,7 +3,6 @@ use zephyr_sdk::soroban_sdk::xdr::{
     TransactionResultMeta, TransactionResultResult,
 };
 
-use crate::config::ALLOW_UNSUCCESSFUL_TRANSACTIONS;
 use crate::swap::Swap;
 use crate::utils::{extract_transaction_results, is_stablecoin};
 
@@ -17,11 +16,10 @@ pub fn swaps(transaction_results: Vec<TransactionResultMeta>) -> Vec<Swap> {
 }
 
 fn is_successful(result_meta: &TransactionResultMeta) -> bool {
-    ALLOW_UNSUCCESSFUL_TRANSACTIONS
-        || matches!(
-            result_meta.result.result.result,
-            TransactionResultResult::TxSuccess(_)
-        )
+    matches!(
+        result_meta.result.result.result,
+        TransactionResultResult::TxSuccess(_)
+    )
 }
 
 fn build_swaps(transaction_result: &TransactionResultMeta) -> Option<Vec<Swap>> {

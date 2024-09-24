@@ -10,8 +10,5 @@ These things were changing very quickly during early development,
 so it made sense to group them here.
 */
 
-// When filtering, must the transactions be successful?
-pub const ALLOW_UNSUCCESSFUL_TRANSACTIONS: bool = false;
-
 // Do we save the swaps to the database?
 pub const SAVE_SWAPS_TO_DATABASE: bool = false;
