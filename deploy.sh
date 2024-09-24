@@ -18,6 +18,7 @@ deploy_to_network() {
     fi
 
     mercury-cli --jwt "${!jwt_var}" --local false --mainnet "$([[ $network == "mainnet" ]] && echo "true" || echo "false")" deploy $([[ $force_mode == true ]] && echo "--force true")
+    return $?
 }
 
 # Load environment variables
@@ -70,15 +71,24 @@ if [ "$deploy_testnet" = true ] && [ "$deploy_mainnet" = true ]; then
 fi
 
 # Deploy to selected networks
+deployment_success=true
 if [ "$deploy_testnet" = true ]; then
     echo "Deploying to testnet..."
-    deploy_to_network "testnet"
+    if ! deploy_to_network "testnet"; then
+        echo -e "\e[30;41mDeployment to testnet failed\e[0m"
+        deployment_success=false
+    fi
 fi
 
 if [ "$deploy_mainnet" = true ]; then
     echo "Deploying to mainnet..."
-    deploy_to_network "mainnet"
+    if ! deploy_to_network "mainnet"; then
+        echo -e "\e[30;41mDeployment to mainnet failed\e[0m"
+        deployment_success=false
+    fi
 fi
 
 cd "$BASE_DIR/indexer"
-echo -e "\e[30;47mDeployment completed at $(date)\e[0m"
+if [ "$deployment_success" = true ]; then
+    echo -e "\e[30;47mDeployment completed at $(date)\e[0m"
+fi
