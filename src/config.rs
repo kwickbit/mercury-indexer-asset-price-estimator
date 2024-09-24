@@ -11,4 +11,4 @@ so it made sense to group them here.
 */
 
 // Do we save the swaps to the database?
-pub const SAVE_SWAPS_TO_DATABASE: bool = false;
+pub const SAVE_SWAPS_TO_DATABASE: bool = true;
