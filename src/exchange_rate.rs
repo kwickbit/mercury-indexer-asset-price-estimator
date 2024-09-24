@@ -8,26 +8,20 @@ pub type UsdVolume = f64;
 pub type WeightedSum = f64;
 pub type ExchangeRate = f64;
 
-pub fn calculate_exchange_rates(client: &EnvClient) -> String {
+pub fn calculate_exchange_rates(client: &EnvClient) -> HashMap<String, (ExchangeRate, UsdVolume)> {
     let rows = client.read::<SwapDbRow>();
 
-    let exchange_rates: HashMap<&String, (ExchangeRate, UsdVolume)> = rows
+    let exchange_rates: HashMap<String, (ExchangeRate, UsdVolume)> = rows
         .iter()
         .fold(HashMap::new(), extract_rates)
         // Now that we have the total swapped amounts, we calculate the exchange rate
         .into_iter()
         .map(|(key, (weighted_sum, total_amount))| {
-            (key, (weighted_sum / total_amount, total_amount))
+            (key.to_owned(), (weighted_sum / total_amount, total_amount))
         })
         .collect();
 
     exchange_rates
-        .iter()
-        .map(|(coin, (weighted_average, volume))| {
-            format!("{coin}: {weighted_average:.6} (volume ${volume:.6})")
-        })
-        .collect::<Vec<_>>()
-        .join(", ")
 }
 
 fn extract_rates<'a>(
