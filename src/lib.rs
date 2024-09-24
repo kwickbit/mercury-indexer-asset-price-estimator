@@ -16,7 +16,15 @@ pub extern "C" fn on_close() {
     let logger = create_logger(&client);
     let exchange_rates = exchange_rate::calculate_exchange_rates(&client);
 
-    logger(&format!("Exchange rates by floatcoin: {}", exchange_rates));
+    let log_message = exchange_rates
+        .iter()
+        .map(|(coin, (weighted_average, volume))| {
+            format!("{coin}: {weighted_average:.4} (volume ${volume:.2})")
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    logger(&format!("Exchange rates by floatcoin: {}", log_message));
 
     if config::SAVE_SWAPS_TO_DATABASE {
         let swaps = filter::swaps(client.reader().tx_processing());
