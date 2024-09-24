@@ -53,20 +53,21 @@ pub extern "C" fn get_exchange_rate() {
     let client = EnvClient::empty();
     let request: Request = client.read_request_body();
     let exchange_rates = exchange_rate::calculate_exchange_rates(&client);
+
     match exchange_rates.get(&request.asset) {
         Some(&(rate, _)) => {
             let response = serde_json::json!({
                 "asset": request.asset,
                 "exchange_rate": rate.to_string(),
             });
-            client.conclude(serde_json::to_string(&response).unwrap());
+            client.conclude(&response);
         }
         None => {
             let response = serde_json::json!({
                 "asset": request.asset,
                 "error": "Asset not found",
             });
-            client.conclude(serde_json::to_string(&response).unwrap());
+            client.conclude(&response);
         }
     }
 }
