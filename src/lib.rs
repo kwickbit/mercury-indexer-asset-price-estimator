@@ -4,13 +4,13 @@ mod db;
 mod filter;
 mod utils;
 
-use std::collections::HashMap;
+use zephyr_sdk::{Condition, DatabaseInteract, EnvClient};
 
-use serde::{Deserialize, Serialize};
-use zephyr_sdk::EnvClient;
-
-use db::exchange_rate;
-use db::models::RatesDbRow;
+use config::SAVEPOINT_UPDATE_INTERVAL;
+use db::{
+    exchange_rate,
+    savepoint::Savepoint,
+};
 
 #[no_mangle]
 pub extern "C" fn on_close() {
@@ -32,6 +32,48 @@ pub extern "C" fn on_close() {
     log(should_log, &exchange_rates, &logger, sequence);
     save_swaps(&client, &logger, sequence);
     save_exchange_rates(&client, exchange_rates, &logger);
+    save_savepoint(&client, &logger, sequence);
+}
+
+fn save_savepoint(client: &EnvClient, logger: &impl Fn(&str), sequence: u32) {
+    let savepoints = client.read::<Savepoint>();
+    let current_timestamp = client.reader().ledger_timestamp();
+
+    match savepoints.len() {
+        0 => {
+            let savepoint = Savepoint {
+                savepoint: client.reader().ledger_timestamp(),
+            };
+
+            savepoint.put(client);
+            logger(&format!("First savepoint: {current_timestamp}"));
+        }
+        1 => {
+            let latest_savepoint = savepoints[0].savepoint;
+
+            if current_timestamp - latest_savepoint > SAVEPOINT_UPDATE_INTERVAL {
+                let savepoint = Savepoint {
+                    savepoint: current_timestamp,
+                };
+
+                let condition = Condition::ColumnEqualTo(
+                    "savepoint".to_string(),
+                    latest_savepoint.to_ne_bytes().to_vec(),
+                );
+
+                savepoint.update(client, &[condition]);
+                logger(&format!("Sequence {sequence} updated savepoint: {current_timestamp}"));
+            } else {
+                logger(&format!(
+                    "Skipping savepoint update: {current_timestamp} < {}",
+                    latest_savepoint + SAVEPOINT_UPDATE_INTERVAL
+                ));
+            }
+        }
+        _ => {
+            client.log().error("More than one savepoint found!", None);
+        }
+    }
 }
 
 fn create_logger(env: &EnvClient) -> impl Fn(&str) + '_ {
