@@ -1,11 +1,11 @@
 pub(crate) mod exchange_rate;
-pub(crate) mod models;
+pub(crate) mod savepoint;
 pub(crate) mod swap;
 
 use zephyr_sdk::{DatabaseInteract, EnvClient};
 
-use crate::db::swap::Swap;
-use crate::db::models::{ExchangeRateMap, RatesDbRow, SwapDbRow};
+use exchange_rate::{ExchangeRateMap, RatesDbRow};
+use swap::{Swap, SwapDbRow};
 
 pub fn save_swaps(client: &EnvClient, swaps: &[Swap]) {
     let timestamp = client.reader().ledger_timestamp();

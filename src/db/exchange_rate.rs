@@ -1,9 +1,32 @@
 use std::collections::HashMap;
 
-use zephyr_sdk::EnvClient;
+use zephyr_sdk::{prelude::*, DatabaseDerive, EnvClient};
 
 use crate::config::CONVERSION_FACTOR;
-use super::models::{ExchangeRateMap, SwapDbRow, UsdVolume, WeightedSum};
+use super::swap::SwapDbRow;
+
+pub type UsdVolume = f64;
+pub type WeightedSum = f64;
+type ExchangeRate = f64;
+pub type ExchangeRateMap = HashMap<String, (ExchangeRate, UsdVolume)>;
+
+#[derive(DatabaseDerive, Clone)]
+#[with_name("rates")]
+pub struct RatesDbRow {
+    pub floating: String,
+    pub rate: f64,
+    volume: f64,
+}
+
+impl From<(&String, &(f64, f64))> for RatesDbRow {
+    fn from((floating, (rate, volume)): (&String, &(f64, f64))) -> Self {
+        RatesDbRow {
+            floating: floating.clone(),
+            rate: *rate,
+            volume: *volume,
+        }
+    }
+}
 
 pub fn calculate_exchange_rates(client: &EnvClient) -> ExchangeRateMap {
     let rows = client.read::<SwapDbRow>();
