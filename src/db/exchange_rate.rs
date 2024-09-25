@@ -2,16 +2,14 @@ use std::collections::HashMap;
 
 use zephyr_sdk::EnvClient;
 
-use crate::{config::CONVERSION_FACTOR, db::SwapDbRow};
+use crate::config::CONVERSION_FACTOR;
+use super::models::{ExchangeRateMap, SwapDbRow, UsdVolume, WeightedSum};
 
-pub type UsdVolume = f64;
-pub type WeightedSum = f64;
-pub type ExchangeRate = f64;
-
-pub fn calculate_exchange_rates(client: &EnvClient) -> HashMap<String, (ExchangeRate, UsdVolume)> {
+pub fn calculate_exchange_rates(client: &EnvClient) -> ExchangeRateMap {
     let rows = client.read::<SwapDbRow>();
+    client.log().debug(&format!("Loaded {} swaps from the database", rows.len()), None);
 
-    let exchange_rates: HashMap<String, (ExchangeRate, UsdVolume)> = rows
+    let exchange_rates = rows
         .iter()
         .fold(HashMap::new(), extract_rates)
         // Now that we have the total swapped amounts, we calculate the exchange rate
@@ -19,7 +17,7 @@ pub fn calculate_exchange_rates(client: &EnvClient) -> HashMap<String, (Exchange
         .map(|(key, (weighted_sum, total_amount))| {
             (key.to_owned(), (weighted_sum / total_amount, total_amount))
         })
-        .collect();
+        .collect::<ExchangeRateMap>();
 
     exchange_rates
 }

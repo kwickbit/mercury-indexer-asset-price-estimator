@@ -3,7 +3,7 @@ use zephyr_sdk::soroban_sdk::xdr::{
     TransactionResultMeta, TransactionResultResult,
 };
 
-use crate::swap::Swap;
+use crate::db::swap::Swap;
 use crate::utils::{extract_transaction_results, is_stablecoin};
 
 pub fn swaps(transaction_results: Vec<TransactionResultMeta>) -> Vec<Swap> {
