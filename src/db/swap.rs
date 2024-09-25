@@ -8,7 +8,7 @@ use crate::{
     utils::{format_asset, is_stablecoin},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct Swap {
     pub created_at: Option<u64>,
     pub stablecoin: String,

@@ -12,7 +12,10 @@ so it made sense to group them here.
 
 // How often do we log exchange rates, measured in sequences
 // There are 11-12 sequences per minute
-pub const LOGGING_INTERVAL: u32 = 4800;
+pub const LOGGING_INTERVAL: u32 = 25;
 
 // Do we save the swaps to the database?
-pub const SAVE_SWAPS_TO_DATABASE: bool = false;
+pub const SAVE_SWAPS_TO_DATABASE: bool = true;
+
+// Do we save the exchange rates to the database?
+pub const SAVE_RATES_TO_DATABASE: bool = false;
