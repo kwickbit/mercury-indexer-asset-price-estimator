@@ -39,3 +39,22 @@ col_type = "BYTEA"
 name = "denom"
 # i32, the denominator of the price
 col_type = "BYTEA"
+
+# This table holds the exchange rates for floatcoins
+[[tables]]
+name = "rates"
+
+[[tables.columns]]
+name = "floating"
+# String, code of the floating coin
+col_type = "BYTEA"
+
+[[tables.columns]]
+name = "rate"
+# f64, the exchange rate
+col_type = "BYTEA"
+
+[[tables.columns]]
+name = "volume"
+# f64, the volume traded in $
+col_type = "BYTEA"
