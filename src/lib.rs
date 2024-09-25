@@ -26,6 +26,21 @@ pub extern "C" fn on_close() {
         Default::default()
     };
 
+    log(should_log, &exchange_rates, &logger, sequence);
+    save_swaps(&client, &logger, sequence);
+    save_exchange_rates(&client, exchange_rates, &logger);
+}
+
+fn create_logger(env: &EnvClient) -> impl Fn(&str) + '_ {
+    move |args| env.log().debug(args, None)
+}
+
+fn log(
+    should_log: bool,
+    exchange_rates: &std::collections::HashMap<String, (f64, f64)>,
+    logger: &impl Fn(&str),
+    sequence: u32,
+) {
     if should_log {
         let log_message = exchange_rates
             .iter()
@@ -39,18 +54,26 @@ pub extern "C" fn on_close() {
             "Sequence {sequence}, exchange rates: {log_message}"
         ));
     }
+}
 
+fn save_swaps(client: &EnvClient, logger: &impl Fn(&str), sequence: u32) {
     if config::SAVE_SWAPS_TO_DATABASE {
         let swaps = filter::swaps(client.reader().tx_processing());
-        db::save_swaps(&client, &swaps);
+        db::save_swaps(client, &swaps);
         logger(&format!(
             "Sequence {sequence}, saved {} swaps to the database",
             swaps.len()
         ));
     }
+}
 
+fn save_exchange_rates(
+    client: &EnvClient,
+    exchange_rates: std::collections::HashMap<String, (f64, f64)>,
+    logger: &impl Fn(&str),
+) {
     if config::SAVE_RATES_TO_DATABASE {
-        let did_save_rates = db::save_rates(&client, &exchange_rates);
+        let did_save_rates = db::save_rates(client, &exchange_rates);
 
         if did_save_rates {
             logger(&format!(
@@ -61,10 +84,6 @@ pub extern "C" fn on_close() {
             logger("Rates were already found in the database");
         }
     }
-}
-
-fn create_logger(env: &EnvClient) -> impl Fn(&str) + '_ {
-    move |args| env.log().debug(args, None)
 }
 
 #[derive(Serialize, Deserialize, Debug)]
