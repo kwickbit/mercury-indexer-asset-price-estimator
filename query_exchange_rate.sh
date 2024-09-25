@@ -4,34 +4,39 @@
 if [ -f .env ]; then
     source .env
 else
-    echo "Error: .env file not found"
+    echo "Error: .env file not found" >&2
     exit 1
 fi
 
 # Check if MAINNET_JWT is set
 if [ -z "$MAINNET_JWT" ]; then
-    echo "Error: MAINNET_JWT is not set in .env file"
+    echo "Error: MAINNET_JWT is not set in .env file" >&2
     exit 1
 fi
 
-# Check if an argument is provided
-if [ $# -eq 0 ]; then
-    echo "Usage: $0 <asset>"
+# Parse command line arguments
+if [ "$1" = "--all" ]; then
+    fname="get_all_exchange_rates"
+    arguments="{}"
+elif [ $# -eq 0 ]; then
+    echo "Usage: $0 <asset> or $0 --all" >&2
     exit 1
-fi
-
-# Make the argument uppercase if it is all-lowercase
-if [[ "$1" =~ ^[a-z]+$ ]]; then
-    asset=${1^^}
 else
-    asset=$1
+    fname="get_exchange_rate"
+    # Make the argument uppercase if it is all-lowercase
+    if [[ "$1" =~ ^[a-z]+$ ]]; then
+        asset=${1^^}
+    else
+        asset=$1
+    fi
+    arguments="{\\\"asset\\\": \\\"$asset\\\"}"
 fi
 
-# Set the QUERY variable with the provided asset
-QUERY="{\"project_name\": \"indexer\", \"mode\": {\"Function\": {\"fname\": \"get_exchange_rate\", \"arguments\": \"{\\\"asset\\\": \\\"$asset\\\"}\"}}}"
+# Set the QUERY variable using a template
+QUERY="{\"project_name\": \"indexer\", \"mode\": {\"Function\": {\"fname\": \"$fname\", \"arguments\": \"$arguments\"}}}"
 
-# Execute the curl command
-curl -X POST https://mainnet.mercurydata.app/zephyr/execute \
+# Call the API, suppressing progress output from `curl`
+curl -s -X POST https://mainnet.mercurydata.app/zephyr/execute \
      -H "Authorization: Bearer $MAINNET_JWT" \
      -H 'Content-Type: application/json' \
      -d "$QUERY" | jq
