@@ -1,9 +1,13 @@
-use zephyr_sdk::{
-    prelude::*,
-    DatabaseDerive, EnvClient,
-};
+use std::collections::HashMap;
 
-use crate::swap::Swap;
+use zephyr_sdk::{prelude::*, DatabaseDerive, EnvClient};
+
+use super::swap::Swap;
+
+pub type UsdVolume = f64;
+pub type WeightedSum = f64;
+type ExchangeRate = f64;
+pub type ExchangeRateMap = HashMap<String, (ExchangeRate, UsdVolume)>;
 
 #[derive(DatabaseDerive, Clone)]
 #[with_name("swaps")]
@@ -20,7 +24,7 @@ pub struct SwapDbRow {
 }
 
 impl SwapDbRow {
-    fn new(swap: &Swap, timestamp: u64) -> Self {
+    pub fn new(swap: &Swap, timestamp: u64) -> Self {
         Self {
             creation: timestamp,
             stable: swap.stablecoin.clone(),
@@ -33,9 +37,20 @@ impl SwapDbRow {
     }
 }
 
-pub fn save_swaps(client: &EnvClient, swaps: &[Swap]) {
-    let timestamp = client.reader().ledger_timestamp();
-    swaps
-        .iter()
-        .for_each(|swap| SwapDbRow::new(swap, timestamp).put(client));
+#[derive(DatabaseDerive, Clone)]
+#[with_name("rates")]
+pub struct RatesDbRow {
+    pub floating: String,
+    pub rate: f64,
+    volume: f64,
+}
+
+impl From<(&String, &(f64, f64))> for RatesDbRow {
+    fn from((floating, (rate, volume)): (&String, &(f64, f64))) -> Self {
+        RatesDbRow {
+            floating: floating.clone(),
+            rate: *rate,
+            volume: *volume,
+        }
+    }
 }
