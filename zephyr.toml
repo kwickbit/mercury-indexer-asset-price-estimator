@@ -1,12 +1,21 @@
 name = "indexer"
 
+# We store the latest time the exchange rates were saved
+[[tables]]
+name = "savepoint"
+
+[[tables.columns]]
+name = "savepoint"
+# u64, timestamp taken from the ledger close time
+col_type = "BYTEA"
+
 # This table holds all the swaps involving our stablecoins of interest
 [[tables]]
 name = "swaps"
 
 [[tables.columns]]
 name = "creation"
-# Timestamp taken from the ledger close time
+# u64, timestamp taken from the ledger close time
 col_type = "BYTEA"
 
 [[tables.columns]]
