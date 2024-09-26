@@ -13,21 +13,12 @@ use db::{exchange_rate, savepoint::Savepoint};
 pub extern "C" fn on_close() {
     // The basics
     let client = EnvClient::new();
+    save_swaps(&client);
+    save_exchange_rates(&client);
+
     let sequence = client.reader().ledger_sequence();
     let logger = create_logger(&client);
 
-    // Hit the DB only when needed
-    let should_log = sequence % config::LOGGING_INTERVAL == 0;
-    let needs_exchange_rates = should_log || config::SAVE_RATES_TO_DATABASE;
-
-    let exchange_rates = if needs_exchange_rates {
-        exchange_rate::calculate_exchange_rates(&client)
-    } else {
-        Default::default()
-    };
-
-    save_swaps(&client);
-    save_exchange_rates(&client, exchange_rates);
     update_savepoint(&client, &logger, sequence);
 }
 
@@ -66,10 +57,10 @@ fn save_swaps(client: &EnvClient) {
 
 fn save_exchange_rates(
     client: &EnvClient,
-    exchange_rates: std::collections::HashMap<String, (f64, f64)>,
 ) {
     if config::SAVE_RATES_TO_DATABASE {
-        db::save_rates(client, &exchange_rates);
+        let rates = exchange_rate::calculate_exchange_rates(client);
+        db::save_rates(client, &rates);
     }
 }
 
@@ -80,7 +71,7 @@ fn update_savepoint(client: &EnvClient, logger: &impl Fn(&str), sequence: u32) {
     match savepoints.len() {
         0 => {
             let savepoint = Savepoint {
-                savepoint: client.reader().ledger_timestamp(),
+                savepoint: current_timestamp,
             };
 
             savepoint.put(client);
