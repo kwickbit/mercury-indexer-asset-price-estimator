@@ -17,6 +17,7 @@ pub extern "C" fn get_exchange_rate() {
 
     let requested_asset_data = exchange_rates
         .iter()
+        .rev()
         .find(|row| row.floating == request.asset);
 
     match requested_asset_data {
