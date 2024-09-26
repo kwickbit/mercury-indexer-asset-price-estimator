@@ -18,8 +18,11 @@ pub fn save_rates(client: &EnvClient, rates: &ExchangeRateMap) -> bool {
     let should_save_rates = client.read::<RatesDbRow>().is_empty();
 
     if should_save_rates {
+        let ledger_timestamp = client.reader().ledger_timestamp();
         rates.iter().for_each(|item| {
-            RatesDbRow::from(item).put(client);
+            let mut row = RatesDbRow::from(item);
+            row.timestamp = Some(ledger_timestamp);
+            row.put(client);
         });
     }
 

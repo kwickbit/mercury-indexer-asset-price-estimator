@@ -18,7 +18,7 @@ pub const LOGGING_INTERVAL: u32 = 25;
 pub const SAVE_SWAPS_TO_DATABASE: bool = true;
 
 // Do we save the exchange rates to the database?
-pub const SAVE_RATES_TO_DATABASE: bool = false;
+pub const SAVE_RATES_TO_DATABASE: bool = true;
 
 // How often do we update the savepoint in seconds?
 pub const SAVEPOINT_UPDATE_INTERVAL: u64 = 300;
