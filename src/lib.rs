@@ -4,13 +4,10 @@ mod db;
 mod filter;
 mod utils;
 
-use zephyr_sdk::{Condition, DatabaseInteract, EnvClient};
+use zephyr_sdk::{DatabaseInteract, EnvClient};
 
 use config::SAVEPOINT_UPDATE_INTERVAL;
-use db::{
-    exchange_rate,
-    savepoint::Savepoint,
-};
+use db::{exchange_rate, savepoint::Savepoint};
 
 #[no_mangle]
 pub extern "C" fn on_close() {
@@ -33,47 +30,6 @@ pub extern "C" fn on_close() {
     save_swaps(&client, &logger, sequence);
     save_exchange_rates(&client, exchange_rates, &logger);
     save_savepoint(&client, &logger, sequence);
-}
-
-fn save_savepoint(client: &EnvClient, logger: &impl Fn(&str), sequence: u32) {
-    let savepoints = client.read::<Savepoint>();
-    let current_timestamp = client.reader().ledger_timestamp();
-
-    match savepoints.len() {
-        0 => {
-            let savepoint = Savepoint {
-                savepoint: client.reader().ledger_timestamp(),
-            };
-
-            savepoint.put(client);
-            logger(&format!("First savepoint: {current_timestamp}"));
-        }
-        1 => {
-            let latest_savepoint = savepoints[0].savepoint;
-
-            if current_timestamp - latest_savepoint > SAVEPOINT_UPDATE_INTERVAL {
-                let savepoint = Savepoint {
-                    savepoint: current_timestamp,
-                };
-
-                let condition = Condition::ColumnEqualTo(
-                    "savepoint".to_string(),
-                    latest_savepoint.to_ne_bytes().to_vec(),
-                );
-
-                savepoint.update(client, &[condition]);
-                logger(&format!("Sequence {sequence} updated savepoint: {current_timestamp}"));
-            } else {
-                logger(&format!(
-                    "Skipping savepoint update: {current_timestamp} < {}",
-                    latest_savepoint + SAVEPOINT_UPDATE_INTERVAL
-                ));
-            }
-        }
-        _ => {
-            client.log().error("More than one savepoint found!", None);
-        }
-    }
 }
 
 fn create_logger(env: &EnvClient) -> impl Fn(&str) + '_ {
@@ -101,14 +57,14 @@ fn log(
     }
 }
 
-fn save_swaps(client: &EnvClient, logger: &impl Fn(&str), sequence: u32) {
+fn save_swaps(client: &EnvClient, _logger: &impl Fn(&str), _sequence: u32) {
     if config::SAVE_SWAPS_TO_DATABASE {
         let swaps = filter::swaps(client.reader().tx_processing());
         db::save_swaps(client, &swaps);
-        logger(&format!(
-            "Sequence {sequence}, saved {} swaps to the database",
-            swaps.len()
-        ));
+        // logger(&format!(
+        //     "Sequence {sequence}, saved {} swaps to the database",
+        //     swaps.len()
+        // ));
     }
 }
 
@@ -127,6 +83,47 @@ fn save_exchange_rates(
             ));
         } else {
             logger("Rates were already found in the database");
+        }
+    }
+}
+
+fn save_savepoint(client: &EnvClient, logger: &impl Fn(&str), sequence: u32) {
+    let savepoints: Vec<Savepoint> = client.read::<Savepoint>();
+    let current_timestamp: u64 = client.reader().ledger_timestamp();
+
+    match savepoints.len() {
+        0 => {
+            let savepoint = Savepoint {
+                savepoint: client.reader().ledger_timestamp(),
+            };
+
+            savepoint.put(client);
+            logger(&format!("First savepoint: {current_timestamp}"));
+        }
+        1 => {
+            let latest_savepoint: u64 = savepoints[0].savepoint;
+
+            if current_timestamp - latest_savepoint > SAVEPOINT_UPDATE_INTERVAL {
+                let savepoint = Savepoint {
+                    savepoint: current_timestamp,
+                };
+
+                match client
+                    .update()
+                    .column_equal_to("savepoint", latest_savepoint)
+                    .execute(&savepoint) {
+                        Ok(_) => logger(&format!("Sequence {sequence} updated savepoint: {current_timestamp} - {latest_savepoint} = {}", current_timestamp - latest_savepoint)),
+                        Err(e) => logger(&format!("Sequence {sequence} failed to update savepoint: {e}"))
+                    };
+            } else {
+                logger(&format!(
+                    "Skipping savepoint update: {current_timestamp} <= {}",
+                    latest_savepoint + SAVEPOINT_UPDATE_INTERVAL
+                ));
+            }
+        }
+        _ => {
+            client.log().error("More than one savepoint found!", None);
         }
     }
 }
