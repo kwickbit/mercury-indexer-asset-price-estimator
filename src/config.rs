@@ -21,4 +21,4 @@ pub const SAVE_SWAPS_TO_DATABASE: bool = true;
 pub const SAVE_RATES_TO_DATABASE: bool = true;
 
 // How often do we update the savepoint in seconds?
-pub const SAVEPOINT_UPDATE_INTERVAL: u64 = 300;
+pub const RATE_UPDATE_INTERVAL: u64 = 300;
