@@ -32,13 +32,7 @@ deploy_to_network() {
 }
 
 # Load environment variables
-ENV_FILE="$BASE_DIR/indexer/.env"
-if [ -f "$ENV_FILE" ]; then
-    source "$ENV_FILE"
-else
-    echo "Error: .env file not found at $ENV_FILE"
-    exit 1
-fi
+source "$BASE_DIR/indexer/scripts/env_loader.sh" || exit 1
 
 # Default to deploying to both networks
 deploy_testnet=true
