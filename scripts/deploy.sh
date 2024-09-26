@@ -3,48 +3,13 @@
 # Base directory for the project
 BASE_DIR="$HOME/code/kwickbit"
 
-# Function to check if force is set in zephyr.toml
-check_force_in_toml() {
-    local toml_file="$BASE_DIR/indexer/zephyr.toml"
-    local force_tables=()
-    if [ -f "$toml_file" ]; then
-        while IFS= read -r line; do
-            if [[ "$line" =~ ^[[:space:]]*force[[:space:]]*=[[:space:]]*true[[:space:]]*$ ]]; then
-                local name=$(awk 'NR==FNR-2 && /^name[[:space:]]*=/ {gsub(/^[^"]*"|"[^"]*$/, ""); print}' "$toml_file")
-                [ -n "$name" ] && force_tables+=("$name")
-            fi
-        done < "$toml_file"
-        [ ${#force_tables[@]} -gt 0 ] && echo "${force_tables[@]}" || echo "true"
-    else
-        echo "false"
-    fi
-}
-
 # Function to deploy to a specific network
 deploy_to_network() {
     local network=$1
     local jwt_var="${network^^}_JWT"
 
-    if [ "$force_mode" = true ] || [ "$(check_force_in_toml)" != "false" ]; then
-        local warning_message
-        if [ "$force_mode" = true ]; then
-            warning_message="Warning: Force mode will destroy all data in the DB."
-        else
-            local force_result=$(check_force_in_toml)
-            if [ "$force_result" = "true" ]; then
-                warning_message="Warning: Force mode will destroy all data in DB tables."
-            else
-                IFS=' ' read -ra tables <<< "$force_result"
-                if [ ${#tables[@]} -eq 1 ]; then
-                    warning_message="Warning: Force mode will destroy all data in the \"${tables[0]}\" table."
-                else
-                    local last_table="${tables[-1]}"
-                    unset 'tables[${#tables[@]}-1]'
-                    warning_message="Warning: Force mode will destroy all data in the ${tables[*]} and $last_table tables."
-                fi
-            fi
-        fi
-        echo -e "\e[1;31m$warning_message\e[0m"
+    if [ "$force_mode" = true ]; then
+        echo -e "\e[1;31mWarning: Force mode will destroy all data in the DB.\e[0m"
         read -p "Type 'force' to confirm: " confirmation
         if [ "$confirmation" != "force" ]; then
             echo "Deployment aborted."
