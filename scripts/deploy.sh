@@ -3,12 +3,22 @@
 # Base directory for the project
 BASE_DIR="$HOME/code/kwickbit"
 
+# Function to check if force is set in zephyr.toml
+check_force_in_toml() {
+    local toml_file="$BASE_DIR/indexer/zephyr.toml"
+    if [ -f "$toml_file" ]; then
+        grep -qE '^\s*force\s*=\s*true\s*$' "$toml_file"
+        return $?
+    fi
+    return 1
+}
+
 # Function to deploy to a specific network
 deploy_to_network() {
     local network=$1
     local jwt_var="${network^^}_JWT"
 
-    if [ "$force_mode" = true ]; then
+    if [ "$force_mode" = true ] || check_force_in_toml; then
         echo -e "\e[1;31mWarning: Force mode will destroy all data in the DB.\e[0m"
         read -p "Type 'force' to confirm: " confirmation
         if [ "$confirmation" != "force" ]; then
