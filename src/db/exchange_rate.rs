@@ -13,6 +13,7 @@ pub type ExchangeRateMap = HashMap<String, (ExchangeRate, UsdVolume)>;
 #[derive(DatabaseDerive, Clone)]
 #[with_name("rates")]
 pub struct RatesDbRow {
+    pub timestamp: Option<u64>,
     pub floating: String,
     pub rate: f64,
     volume: f64,
@@ -21,6 +22,7 @@ pub struct RatesDbRow {
 impl From<(&String, &(f64, f64))> for RatesDbRow {
     fn from((floating, (rate, volume)): (&String, &(f64, f64))) -> Self {
         RatesDbRow {
+            timestamp: None,
             floating: floating.clone(),
             rate: *rate,
             volume: *volume,

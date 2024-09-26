@@ -54,6 +54,11 @@ col_type = "BYTEA"
 name = "rates"
 
 [[tables.columns]]
+name = "timestamp"
+# u64, timestamp of the end of the averaging window
+col_type = "BYTEA"
+
+[[tables.columns]]
 name = "floating"
 # String, code of the floating coin
 col_type = "BYTEA"
