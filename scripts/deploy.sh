@@ -3,15 +3,11 @@
 # Base directory for the project
 BASE_DIR="$HOME/code/kwickbit"
 
-# Function to check if force is set in zephyr.toml
-check_force_in_toml() {
-    local toml_file="$BASE_DIR/indexer/zephyr.toml"
-    if [ -f "$toml_file" ]; then
-        grep -qE '^\s*force\s*=\s*true\s*$' "$toml_file"
-        return $?
-    fi
-    return 1
-}
+# Load environment variables
+source "$BASE_DIR/indexer/scripts/env_loader.sh" || exit 1
+
+# Check if zephyr.toml specifies force mode for any tables
+source "$BASE_DIR/indexer/scripts/check_force.sh"
 
 # Function to deploy to a specific network
 deploy_to_network() {
@@ -30,9 +26,6 @@ deploy_to_network() {
     mercury-cli --jwt "${!jwt_var}" --local false --mainnet "$([[ $network == "mainnet" ]] && echo "true" || echo "false")" deploy $([[ $force_mode == true ]] && echo "--force true")
     return $?
 }
-
-# Load environment variables
-source "$BASE_DIR/indexer/scripts/env_loader.sh" || exit 1
 
 # Default to deploying to both networks
 deploy_testnet=true
