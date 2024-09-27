@@ -1,12 +1,10 @@
 #!/bin/bash
 
+# Base directory for the project
+BASE_DIR="$HOME/code/kwickbit"
+
 # Load environment variables
-if [ -f .env ]; then
-    source .env
-else
-    echo "Error: .env file not found" >&2
-    exit 1
-fi
+source "$BASE_DIR/indexer/scripts/env_loader.sh" || exit 1
 
 # Check if MAINNET_JWT is set
 if [ -z "$MAINNET_JWT" ]; then
@@ -19,7 +17,7 @@ if [ "$1" = "--all" ]; then
     fname="get_all_exchange_rates"
     arguments="{}"
 elif [ $# -eq 0 ]; then
-    echo "Usage: $0 <asset> or $0 --all" >&2
+    echo "Usage: \`query <asset>\` or \`query --all"\` >&2
     exit 1
 else
     fname="get_exchange_rate"
