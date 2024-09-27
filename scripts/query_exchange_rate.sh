@@ -8,20 +8,32 @@ if [ -z "$MAINNET_JWT" ]; then
     exit 1
 fi
 
+# Initialize raw_output flag
+raw_output=false
+command=""
+
 # Parse command line arguments
-if [ "$1" = "--all" ]; then
+for arg in "$@"; do
+    case $arg in
+        --raw) raw_output=true ;;
+        all) command="all" ;;
+        *) command=$arg ;;
+    esac
+done
+
+if [ "$command" = "all" ]; then
     fname="get_all_exchange_rates"
     arguments="{}"
-elif [ $# -eq 0 ]; then
-    echo "Usage: \`query <asset>\` or \`query --all"\` >&2
+elif [ -z "$command" ]; then
+    echo "Usage: \`query <asset>\` or \`query all\` or \`query --raw <asset>\` or \`query --raw all\`" >&2
     exit 1
 else
     fname="get_exchange_rate"
     # Make the argument uppercase if it is all-lowercase
-    if [[ "$1" =~ ^[a-z]+$ ]]; then
-        asset=${1^^}
+    if [[ "$command" =~ ^[a-z]+$ ]]; then
+        asset=${command^^}
     else
-        asset=$1
+        asset=$command
     fi
     arguments="{\\\"asset\\\": \\\"$asset\\\"}"
 fi
@@ -33,4 +45,4 @@ QUERY="{\"project_name\": \"indexer\", \"mode\": {\"Function\": {\"fname\": \"$f
 curl -s -X POST https://mainnet.mercurydata.app/zephyr/execute \
      -H "Authorization: Bearer $MAINNET_JWT" \
      -H 'Content-Type: application/json' \
-     -d "$QUERY" | jq
+     -d "$QUERY" | if [ "$raw_output" = true ]; then cat; else jq; fi
