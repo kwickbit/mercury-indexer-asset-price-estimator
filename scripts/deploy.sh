@@ -1,10 +1,7 @@
 #!/bin/bash
 
-# Base directory for the project
-BASE_DIR="$HOME/code/kwickbit"
-
-# Load environment variables
-source "$BASE_DIR/indexer/scripts/env_loader.sh" || exit 1
+# Load environment variables and set $BASE_DIR
+source "$(dirname "$0")/env_loader.sh"
 
 # Check if zephyr.toml specifies force mode for any tables
 source "$BASE_DIR/indexer/scripts/check_force.sh"
@@ -37,20 +34,10 @@ force_mode=false
 for arg in "$@"
 do
     case $arg in
-        --test)
-        deploy_testnet=true
-        deploy_mainnet=false
-        ;;
-        --main)
-        deploy_testnet=false
-        deploy_mainnet=true
-        ;;
-        --reset)
-        reset_mode=true
-        ;;
-        --force)
-        force_mode=true
-        ;;
+        --test) deploy_mainnet=false ;;
+        --main) deploy_testnet=false ;;
+        --reset) reset_mode=true ;;
+        --force) force_mode=true ;;
     esac
 done
 
