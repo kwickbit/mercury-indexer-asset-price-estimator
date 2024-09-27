@@ -10,7 +10,7 @@ pub type WeightedSum = f64;
 type ExchangeRate = f64;
 pub type ExchangeRateMap = HashMap<String, (ExchangeRate, UsdVolume)>;
 
-#[derive(DatabaseDerive, Clone)]
+#[derive(DatabaseDerive)]
 #[with_name("rates")]
 pub struct RatesDbRow {
     pub timestamp: Option<u64>,
