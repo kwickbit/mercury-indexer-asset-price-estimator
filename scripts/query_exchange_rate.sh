@@ -1,10 +1,6 @@
 #!/bin/bash
 
-# Base directory for the project
-BASE_DIR="$HOME/code/kwickbit"
-
-# Load environment variables
-source "$BASE_DIR/indexer/scripts/env_loader.sh" || exit 1
+source "$(dirname "$0")/env_loader.sh"
 
 # Check if MAINNET_JWT is set
 if [ -z "$MAINNET_JWT" ]; then

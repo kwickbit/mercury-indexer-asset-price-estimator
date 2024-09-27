@@ -1,8 +1,9 @@
 #!/bin/bash
 
+BASE_DIR="$HOME/code/kwickbit"
+
 load_env_vars() {
-    local base_dir="$HOME/code/kwickbit"
-    local env_file="$base_dir/indexer/.env"
+    local env_file="$BASE_DIR/indexer/.env"
 
     if [ -f "$env_file" ]; then
         source "$env_file"
@@ -12,4 +13,4 @@ load_env_vars() {
     fi
 }
 
-load_env_vars
+load_env_vars || exit 1
