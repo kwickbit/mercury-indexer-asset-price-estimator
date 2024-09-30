@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use time::{format_description::well_known::Iso8601, OffsetDateTime};
+use time::{error::Parse, format_description::well_known::Iso8601, OffsetDateTime};
 use zephyr_sdk::EnvClient;
 
 use crate::db::exchange_rate::RatesDbRow;
@@ -22,29 +22,9 @@ pub extern "C" fn get_exchange_rate() {
     let client = EnvClient::empty();
     let request = client.read_request_body::<ExchangeRateRequest>();
 
-    // We find the latest exchange rate for the requested asset before the
-    // requested date, or the latest exchange rate if no date is provided.
-    let response = match find_asset_data(&client, &request) {
-        Ok(data) => {
-            let date_time = get_row_timestamp(&data);
-
-            serde_json::json!({
-                "asset": request.asset,
-                "exchange_rate": data.rate.to_string(),
-                "date_time": date_time,
-            })
-        }
-        Err(ExchangeRateError::NotFound) => {
-            let error = match request.date {
-                Some(date) => format!("No exchange rate found before date {}.", date),
-                None => "No exchange rate found.".to_string(),
-            };
-
-            serde_json::json!({
-                "asset": request.asset,
-                "error": error,
-            })
-        }
+    let response = match find_exchange_rate(&client, &request) {
+        Ok(data) => build_ok_response(data, &request),
+        Err(ExchangeRateError::NotFound) => build_not_found_response(request),
         Err(ExchangeRateError::InvalidDate) => {
             serde_json::json!({
                 "error": "Invalid date format. Please use the format '2020-09-16T14:30:00'.",
@@ -55,14 +35,9 @@ pub extern "C" fn get_exchange_rate() {
     client.conclude(&response);
 }
 
-fn get_row_timestamp(data: &RatesDbRow) -> String {
-    OffsetDateTime::from_unix_timestamp(data.timestamp.unwrap() as i64)
-        .unwrap()
-        .format(&Iso8601::DEFAULT)
-        .unwrap()
-}
-
-fn find_asset_data(
+// We find the latest exchange rate for the requested asset before the
+// requested date, or the latest exchange rate if no date is provided.
+fn find_exchange_rate(
     client: &EnvClient,
     request: &ExchangeRateRequest,
 ) -> Result<RatesDbRow, ExchangeRateError> {
@@ -73,21 +48,59 @@ fn find_asset_data(
             let maybe_date_time = time::PrimitiveDateTime::parse(date_str, &Iso8601::DEFAULT)
                 .map(|dt| dt.assume_utc());
 
-            match maybe_date_time {
-                Ok(date_time) => exchange_rates
-                    .into_iter()
-                    .rev()
-                    .filter(|row| row.floating == request.asset)
-                    .find(|row| row.timestamp.unwrap() <= date_time.unix_timestamp() as u64)
-                    .ok_or(ExchangeRateError::NotFound),
-                Err(_) => Err(ExchangeRateError::InvalidDate),
-            }
+            find_rate_with_date(maybe_date_time, &exchange_rates, request)
         }
         None => exchange_rates
             .into_iter()
             .rev()
             .find(|row| row.floating == request.asset)
             .ok_or(ExchangeRateError::NotFound),
+    }
+}
+
+fn build_ok_response(data: RatesDbRow, request: &ExchangeRateRequest) -> serde_json::Value {
+    let date_time = get_row_timestamp(&data);
+
+    serde_json::json!({
+        "asset": request.asset,
+        "exchange_rate": data.rate.to_string(),
+        "date_time": date_time,
+    })
+}
+
+fn build_not_found_response(request: ExchangeRateRequest) -> serde_json::Value {
+    let error = match request.date {
+        Some(date) => format!("No exchange rate found before date {}.", date),
+        None => "No exchange rate found.".to_string(),
+    };
+
+    serde_json::json!({
+        "asset": request.asset,
+        "error": error,
+    })
+}
+
+fn get_row_timestamp(data: &RatesDbRow) -> String {
+    OffsetDateTime::from_unix_timestamp(data.timestamp.unwrap() as i64)
+        .unwrap()
+        .format(&Iso8601::DEFAULT)
+        .unwrap()
+}
+
+fn find_rate_with_date(
+    maybe_date_time: Result<OffsetDateTime, Parse>,
+    exchange_rates: &[RatesDbRow],
+    request: &ExchangeRateRequest,
+) -> Result<RatesDbRow, ExchangeRateError> {
+    match maybe_date_time {
+        Ok(date_time) => exchange_rates
+            .iter()
+            .rev()
+            .filter(|row| row.floating == request.asset)
+            .find(|row| row.timestamp.unwrap() <= date_time.unix_timestamp() as u64)
+            .cloned()
+            .ok_or(ExchangeRateError::NotFound),
+        Err(_) => Err(ExchangeRateError::InvalidDate),
     }
 }
 
