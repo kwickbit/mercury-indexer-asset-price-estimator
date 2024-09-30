@@ -14,7 +14,7 @@ HELP_MESSAGE="Usage: query [options] <command> [arguments]
 
 Commands:
   all                     Get all exchange rates
-  asset <asset_symbol>    Get exchange rate for a specific asset
+  asset <asset_symbol> [datetime]    Get exchange rate for a specific asset, optionally at a specific time
 
 Options:
   --raw                   Output raw JSON (don't pipe to jq)
@@ -22,7 +22,8 @@ Options:
 
 Examples:
   query all
-  query asset BTC
+  query asset XLM
+  query asset BTC 2018-01-01T14:30:00
   query --raw all
-  query --raw asset LTC
+  query --raw asset ETH 2020-16-09T16:09:00
   query --help"
