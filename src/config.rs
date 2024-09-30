@@ -8,4 +8,4 @@ pub const CONVERSION_FACTOR: f64 = 10_000_000.0;
 const MINUTE: u64 = 60;
 const _HOUR: u64 = 60 * MINUTE;
 const _DAY: u64 = 24 * _HOUR;
-pub const RATE_UPDATE_INTERVAL: u64 = 15 * MINUTE;
+pub const RATE_UPDATE_INTERVAL: u64 = 2 * MINUTE;
