@@ -4,6 +4,7 @@ parse_arguments() {
     local raw_output=false
     local command=""
     local asset=""
+    local date=""
 
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -29,6 +30,11 @@ parse_arguments() {
                         asset=$1
                     fi
                     shift
+                    # Check for optional date argument
+                    if [[ $# -gt 0 && "$1" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$ ]]; then
+                        date=$1
+                        shift
+                    fi
                 else
                     echo "Error: Asset symbol required for 'asset' command" >&2
                     return 1
@@ -47,6 +53,6 @@ parse_arguments() {
         return 1
     fi
 
-    echo "$raw_output:$command:$asset"
+    echo "$raw_output:$command:$asset:$date"
     return 0
 }
