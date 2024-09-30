@@ -30,7 +30,10 @@ pub fn save_rates(client: &EnvClient) {
     }
 
     let current_timestamp = client.reader().ledger_timestamp();
-    let mut latest_savepoint = current_timestamp - RATE_UPDATE_INTERVAL;
+    let latest_savepoint = savepoints
+        .first()
+        .map(|s| s.savepoint)
+        .unwrap_or(current_timestamp - RATE_UPDATE_INTERVAL);
 
     // We check if it is time to save the exchange rates.
     let is_time_to_save_rates = if savepoints.is_empty() {
@@ -42,7 +45,6 @@ pub fn save_rates(client: &EnvClient) {
     } else {
         // If there is a savepoint, we only save fresh rates if
         // the existing ones are stale.
-        latest_savepoint = savepoints[0].savepoint;
         let are_rates_stale = current_timestamp - latest_savepoint > RATE_UPDATE_INTERVAL;
 
         if are_rates_stale {
@@ -53,6 +55,8 @@ pub fn save_rates(client: &EnvClient) {
     };
 
     if is_time_to_save_rates {
+        // Whether the savepoint was defined or not, we calculate the rates
+        // for the interval defined as RATE_UPDATE_INTERVAL.
         let rates = exchange_rate::calculate_exchange_rates(client, latest_savepoint);
 
         rates.iter().for_each(|item| {
