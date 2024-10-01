@@ -1,7 +1,6 @@
 #!/bin/bash
 
 source "$(dirname "$0")/query_config.sh"
-source "$(dirname "$0")/query_args.sh"
 
 # Parse arguments
 result=$(parse_arguments "$@")
