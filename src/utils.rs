@@ -1,9 +1,20 @@
 use zephyr_sdk::soroban_sdk::xdr::{
-    AlphaNum12, AlphaNum4, Asset, OperationResult, OperationResultTr, TransactionResultMeta,
-    TransactionResultResult,
+    AlphaNum12, AlphaNum4, Asset, OperationBody, OperationResult, OperationResultTr, TransactionEnvelope, TransactionResultMeta, TransactionResultResult
 };
 
 use crate::config::STABLECOINS;
+
+#[allow(dead_code)]
+pub fn extract_transaction_operations(transaction: &TransactionEnvelope) -> Vec<OperationBody> {
+    let operations = match transaction {
+        TransactionEnvelope::TxV0(envelope) => &envelope.tx.operations,
+        TransactionEnvelope::Tx(envelope) => &envelope.tx.operations,
+        _ => &Default::default(),
+    };
+
+    operations.iter().map(|op| op.body.clone()).collect()
+}
+
 
 pub fn extract_transaction_results(result_meta: &TransactionResultMeta) -> Vec<OperationResultTr> {
     match &result_meta.result.result.result {

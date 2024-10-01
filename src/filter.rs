@@ -1,12 +1,122 @@
 use zephyr_sdk::soroban_sdk::xdr::{
-    ManageBuyOfferResult, ManageOfferSuccessResultOffer, ManageSellOfferResult, OperationResultTr,
-    TransactionResultMeta, TransactionResultResult,
+    ClaimAtom, ManageBuyOfferResult, ManageOfferSuccessResultOffer, ManageSellOfferResult, OperationBody, OperationResultTr, PathPaymentStrictReceiveResult, PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendResult, PathPaymentStrictSendResultSuccess, SimplePaymentResult, TransactionEnvelope, TransactionResultMeta, TransactionResultResult
 };
 
 use crate::db::swap::Swap;
 use crate::utils::{extract_transaction_results, is_stablecoin};
 
-pub fn swaps(transaction_results: Vec<TransactionResultMeta>) -> Vec<Swap> {
+pub fn swaps_from_path_payment_results(
+    transactions: &[TransactionEnvelope],
+    results: &[TransactionResultMeta],
+) -> Vec<Swap> {
+    results
+        .iter()
+        .filter(|transaction_result| is_successful(transaction_result))
+        .zip(transactions)
+        .filter_map(build_swaps_from_path_payment_results)
+        .flatten()
+        .collect::<Vec<Swap>>()
+}
+
+fn build_swaps_from_path_payment_results(
+    (transaction_result, transaction): (&TransactionResultMeta, &TransactionEnvelope),
+) -> Option<Vec<Swap>> {
+    if !is_path_payment(transaction) {
+        return None;
+    }
+
+    build_transaction_ppr_swaps(transaction_result)
+}
+
+fn build_transaction_ppr_swaps(transaction_result: &TransactionResultMeta) -> Option<Vec<Swap>> {
+    let operation_results = extract_transaction_results(transaction_result);
+
+    let potential_swaps: Vec<Swap> = operation_results
+        .iter()
+        .filter_map(build_operation_ppr_swaps)
+        .flatten()
+        .collect();
+
+    (!potential_swaps.is_empty()).then_some(potential_swaps)
+}
+
+fn build_operation_ppr_swaps(operation_result: &OperationResultTr) -> Option<Vec<Swap>> {
+    match operation_result {
+        OperationResultTr::PathPaymentStrictReceive(PathPaymentStrictReceiveResult::Success(
+            PathPaymentStrictReceiveResultSuccess { offers, last },
+        ))
+        | OperationResultTr::PathPaymentStrictSend(PathPaymentStrictSendResult::Success(
+            PathPaymentStrictSendResultSuccess { offers, last },
+        )) => build_swaps_from_offers_and_last(offers.as_vec(), last),
+        _ => None,
+    }
+}
+fn build_swaps_from_offers_and_last(
+    offers:&[ClaimAtom],
+    _last: &SimplePaymentResult,
+) -> Option<Vec<Swap>> {
+    offers.iter().map(|_| Default::default()).collect()
+}
+
+pub fn swaps_from_path_payment_offers(
+    transactions: &[TransactionEnvelope],
+    results: &[TransactionResultMeta],
+) -> Vec<Swap> {
+    results
+        .iter()
+        .filter(|transaction_result| is_successful(transaction_result))
+        .zip(transactions)
+        .filter_map(build_swaps_from_path_payment_offers)
+        .flatten()
+        .collect::<Vec<Swap>>()
+}
+
+fn build_swaps_from_path_payment_offers(
+    (transaction_result, transaction): (&TransactionResultMeta, &TransactionEnvelope),
+) -> Option<Vec<Swap>> {
+    if !is_path_payment(transaction) {
+        return None;
+    }
+
+    build_swaps(transaction_result)
+}
+
+pub fn swaps_from_elsewhere(
+    transactions: &[TransactionEnvelope],
+    results: &[TransactionResultMeta],
+) -> Vec<Swap> {
+    results
+        .iter()
+        .filter(|transaction_result| is_successful(transaction_result))
+        .zip(transactions)
+        .filter_map(build_swaps_from_elsewhere)
+        .flatten()
+        .collect::<Vec<Swap>>()
+}
+
+fn build_swaps_from_elsewhere(
+    (transaction_result, transaction): (&TransactionResultMeta, &TransactionEnvelope),
+) -> Option<Vec<Swap>> {
+    if is_path_payment(transaction) {
+        return None;
+    }
+
+    build_swaps(transaction_result)
+}
+
+fn is_path_payment(transaction: &TransactionEnvelope) -> bool {
+    let operations = crate::utils::extract_transaction_operations(transaction);
+
+    operations.iter().any(|operation| {
+        matches!(
+            operation,
+            OperationBody::PathPaymentStrictReceive(_) | OperationBody::PathPaymentStrictSend(_)
+        )
+    })
+}
+
+#[allow(dead_code)]
+pub fn swaps(transaction_results: &[TransactionResultMeta]) -> Vec<Swap> {
     transaction_results
         .iter()
         .filter(|transaction_result| is_successful(transaction_result))
