@@ -17,6 +17,7 @@ pub fn save_swaps(client: &EnvClient, swaps: &[Swap]) {
         .for_each(|swap| SwapDbRow::new(swap, timestamp).put(client));
 }
 
+#[allow(dead_code)]
 pub fn save_rates(client: &EnvClient) {
     let savepoints = client.read::<Savepoint>();
 
