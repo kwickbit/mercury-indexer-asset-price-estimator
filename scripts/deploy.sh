@@ -1,28 +1,7 @@
 #!/bin/bash
 
 # Load environment variables and set $BASE_DIR
-source "$(dirname "$0")/env_loader.sh"
-
-# Check if zephyr.toml specifies force mode for any tables
-source "$BASE_DIR/indexer/scripts/check_force.sh"
-
-# Function to deploy to a specific network
-deploy_to_network() {
-    local network=$1
-    local jwt_var="${network^^}_JWT"
-
-    if [ "$force_mode" = true ] || check_force_in_toml; then
-        echo -e "\e[1;31mWarning: Force mode will destroy all data in the DB.\e[0m"
-        read -p "Type 'force' to confirm: " confirmation
-        if [ "$confirmation" != "force" ]; then
-            echo "Deployment aborted."
-            exit 1
-        fi
-    fi
-
-    mercury-cli --jwt "${!jwt_var}" --local false --mainnet "$([[ $network == "mainnet" ]] && echo "true" || echo "false")" deploy $([[ $force_mode == true ]] && echo "--force true")
-    return $?
-}
+source "$(dirname "$0")/deploy_config.sh"
 
 # Default to deploying to both networks
 deploy_testnet=true

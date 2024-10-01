@@ -2,6 +2,7 @@
 
 # Load environment variables
 source "$(dirname "$0")/env_loader.sh"
+source "$(dirname "$0")/query_args.sh"
 
 # Check if MAINNET_JWT is set
 if [ -z "$MAINNET_JWT" ]; then
