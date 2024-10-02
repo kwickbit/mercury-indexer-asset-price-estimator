@@ -1,5 +1,23 @@
 #! /bin/bash
 
+# Backup the code before deploying
+backup_and_deploy() {
+    local network=$1
+    local deploy_dir="$BASE_DIR/indexer/deploy/$network"
+
+    mkdir -p "$deploy_dir"
+    rm -rf "$deploy_dir"/*
+    cp -R "$BASE_DIR/indexer/src"/* "$deploy_dir"
+
+    if [ "$network" = "test" ]; then
+        deploy_to_network "testnet"
+    else
+        deploy_to_network "mainnet"
+    fi
+
+    return $?
+}
+
 # Function to deploy to a specific network
 deploy_to_network() {
     local network=$1

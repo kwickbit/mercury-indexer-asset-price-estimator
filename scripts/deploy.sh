@@ -37,7 +37,7 @@ fi
 deployment_success=true
 if [ "$deploy_testnet" = true ]; then
     echo "Deploying to testnet..."
-    if ! deploy_to_network "testnet"; then
+    if ! backup_and_deploy "test"; then
         echo -e "\e[30;41mDeployment to testnet failed\e[0m"
         deployment_success=false
     fi
@@ -45,7 +45,7 @@ fi
 
 if [ "$deploy_mainnet" = true ]; then
     echo "Deploying to mainnet..."
-    if ! deploy_to_network "mainnet"; then
+    if ! backup_and_deploy "main"; then
         echo -e "\e[30;41mDeployment to mainnet failed\e[0m"
         deployment_success=false
     fi
@@ -53,5 +53,5 @@ fi
 
 cd "$BASE_DIR/indexer"
 if [ "$deployment_success" = true ]; then
-    echo -e "\e[30;47mDeployment completed at $(date)\e[0m"
+echo -e "\e[30;47mDeployment completed at $(date)\e[0m"
 fi
