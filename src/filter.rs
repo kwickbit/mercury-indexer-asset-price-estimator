@@ -2,15 +2,16 @@ use zephyr_sdk::soroban_sdk::xdr::{
     ManageBuyOfferResult, ManageOfferSuccessResultOffer, ManageSellOfferResult, OperationResultTr,
     TransactionResultMeta, TransactionResultResult,
 };
+use zephyr_sdk::EnvClient;
 
 use crate::db::swap::Swap;
 use crate::utils::{extract_transaction_results, is_stablecoin};
 
-pub fn swaps(transaction_results: Vec<TransactionResultMeta>) -> Vec<Swap> {
+pub fn swaps(transaction_results: Vec<TransactionResultMeta>, client: &EnvClient) -> Vec<Swap> {
     transaction_results
         .iter()
         .filter(|transaction_result| is_successful(transaction_result))
-        .filter_map(build_swaps)
+        .filter_map(|result| build_swaps(result, client))
         .flatten()
         .collect::<Vec<Swap>>()
 }
@@ -22,15 +23,15 @@ fn is_successful(result_meta: &TransactionResultMeta) -> bool {
     )
 }
 
-fn build_swaps(transaction_result: &TransactionResultMeta) -> Option<Vec<Swap>> {
+fn build_swaps(transaction_result: &TransactionResultMeta, client: &EnvClient) -> Option<Vec<Swap>> {
     let operation_results = extract_transaction_results(transaction_result);
     // It could be that a transaction does not contain swaps (e.g. a simple payment,
     // an account creation).
-    let potential_swaps: Vec<Swap> = operation_results.iter().filter_map(build_swap).collect();
+    let potential_swaps: Vec<Swap> = operation_results.iter().filter_map(|result| build_swap(result, client)).collect();
     (!potential_swaps.is_empty()).then_some(potential_swaps)
 }
 
-fn build_swap(operation_result: &OperationResultTr) -> Option<Swap> {
+fn build_swap(operation_result: &OperationResultTr, client: &EnvClient) -> Option<Swap> {
     match operation_result {
         // At the moment, these are the only swaps we can reliably detect.
         // Later we might also get swaps from PathPayments.
