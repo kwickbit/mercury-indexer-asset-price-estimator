@@ -15,7 +15,7 @@ pub struct SwapDbRow {
     pub stableamt: i64,
     // This is a stand-in for a boolean: 1 means the swap was a
     // stablecoin sale, 0 means a purchase
-    pub stbl_sold: i8,
+    pub stbl_sold: i32,
     pub floating: String,
     pub numerator: i32,
     pub denom: i32,
@@ -27,7 +27,7 @@ impl SwapDbRow {
             creation: timestamp,
             stable: swap.stablecoin.clone(),
             stableamt: swap.stablecoin_amount as i64,
-            stbl_sold: swap.is_stablecoin_sale as i8,
+            stbl_sold: swap.is_stablecoin_sale as i32,
             floating: swap.floating_asset.clone(),
             numerator: swap.price_numerator,
             denom: swap.price_denominator,

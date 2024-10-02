@@ -31,31 +31,41 @@ impl From<(&String, &(f64, f64))> for RatesDbRow {
 }
 
 pub fn calculate_exchange_rates(client: &EnvClient, savepoint: u64) -> ExchangeRateMap {
-    let rows: Vec<SwapDbRow> = client
-        .read::<SwapDbRow>()
-        .into_iter()
-        .filter(|row| row.creation > savepoint)
-        .collect();
+    // We query the DB only for the swaps that happened after the savepoint
+    let swaps = read_swaps(client, savepoint);
 
     client.log().debug(
-        &format!("Loaded {} swaps from the database", rows.len()),
+        &format!(
+            "Loaded {} swaps from the database ({} kb)",
+            swaps.len(),
+            (swaps.len() * std::mem::size_of::<SwapDbRow>()) / 1024
+        ),
         None,
     );
 
-    let exchange_rates = rows
+    calculate_rates(swaps)
+}
+
+fn read_swaps(client: &EnvClient, savepoint: u64) -> Vec<SwapDbRow> {
+    client
+        .read_filter()
+        .column_gt("creation", savepoint)
+        .read::<SwapDbRow>()
+        .unwrap()
+}
+
+fn calculate_rates(swaps: Vec<SwapDbRow>) -> ExchangeRateMap {
+    swaps
         .iter()
-        .fold(HashMap::new(), extract_rates)
-        // Now that we have the total swapped amounts, we calculate the exchange rate
+        .fold(HashMap::new(), extract_amounts)
         .into_iter()
         .map(|(key, (weighted_sum, total_amount))| {
             (key.to_owned(), (weighted_sum / total_amount, total_amount))
         })
-        .collect::<ExchangeRateMap>();
-
-    exchange_rates
+        .collect::<ExchangeRateMap>()
 }
 
-fn extract_rates<'a>(
+fn extract_amounts<'a>(
     mut counts: HashMap<&'a String, (WeightedSum, UsdVolume)>,
     row: &'a SwapDbRow,
 ) -> HashMap<&'a String, (WeightedSum, UsdVolume)> {

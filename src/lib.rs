@@ -16,5 +16,5 @@ pub extern "C" fn on_close() {
     db::save_swaps(&client, &swaps);
 
     // If it is time, calculate and save the exchange rates from the latest sequence
-    // db::save_rates(&client);
+    db::save_rates(&client);
 }
