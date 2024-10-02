@@ -4,8 +4,9 @@ use zephyr_sdk::soroban_sdk::xdr::{
 };
 use zephyr_sdk::EnvClient;
 
+use crate::config::USDC;
 use crate::db::swap::Swap;
-use crate::utils::{extract_transaction_results, is_stablecoin};
+use crate::utils::extract_transaction_results;
 
 pub fn swaps(transaction_results: Vec<TransactionResultMeta>, client: &EnvClient) -> Vec<Swap> {
     transaction_results
@@ -23,11 +24,17 @@ fn is_successful(result_meta: &TransactionResultMeta) -> bool {
     )
 }
 
-fn build_swaps(transaction_result: &TransactionResultMeta, client: &EnvClient) -> Option<Vec<Swap>> {
+fn build_swaps(
+    transaction_result: &TransactionResultMeta,
+    client: &EnvClient,
+) -> Option<Vec<Swap>> {
     let operation_results = extract_transaction_results(transaction_result);
     // It could be that a transaction does not contain swaps (e.g. a simple payment,
     // an account creation).
-    let potential_swaps: Vec<Swap> = operation_results.iter().filter_map(|result| build_swap(result, client)).collect();
+    let potential_swaps: Vec<Swap> = operation_results
+        .iter()
+        .filter_map(|result| build_swap(result, client))
+        .collect();
     (!potential_swaps.is_empty()).then_some(potential_swaps)
 }
 
@@ -42,7 +49,7 @@ fn build_swap(operation_result: &OperationResultTr, client: &EnvClient) -> Optio
                 ManageOfferSuccessResultOffer::Created(offer_entry)
                 | ManageOfferSuccessResultOffer::Updated(offer_entry)
                     // Some swaps involve only floating assets; we are not interested in those.
-                    if is_stablecoin(&offer_entry.selling) || is_stablecoin(&offer_entry.buying) =>
+                    if offer_entry.selling == USDC || offer_entry.buying == USDC =>
                 {
                     Some(Swap::from(offer_entry.clone()))
                 }
