@@ -1,10 +1,63 @@
 use zephyr_sdk::soroban_sdk::xdr::{
-    ClaimAtom, ManageBuyOfferResult, ManageOfferSuccessResultOffer, ManageSellOfferResult, OperationBody, OperationResultTr, PathPaymentStrictReceiveResult, PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendResult, PathPaymentStrictSendResultSuccess, SimplePaymentResult, TransactionEnvelope, TransactionResultMeta, TransactionResultResult
+    ClaimAtom, ManageBuyOfferResult, ManageOfferSuccessResultOffer, ManageSellOfferResult,
+    OperationBody, OperationResultTr, PathPaymentStrictReceiveResult,
+    PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendResult,
+    PathPaymentStrictSendResultSuccess, SimplePaymentResult, TransactionEnvelope,
+    TransactionResultMeta, TransactionResultResult,
 };
 
 use crate::db::swap::Swap;
 use crate::utils::{extract_transaction_results, is_stablecoin};
 
+pub fn tmp_path_payments(envelopes: &[TransactionEnvelope]) -> Vec<&TransactionEnvelope> {
+    envelopes
+        .iter()
+        .filter(|transaction| is_path_payment(transaction))
+        .collect()
+}
+
+pub fn tmp_pps_with_offer_results<'a>(
+    transactions: &'a [TransactionEnvelope],
+    results: &'a [TransactionResultMeta],
+) -> Vec<(&'a TransactionEnvelope, &'a TransactionResultMeta)> {
+    transactions
+        .iter()
+        .zip(results)
+        .filter(|(_, result)| is_successful(result))
+        .filter_map(|(transaction, result)| tmp_maybe_pp_with_offer_result(transaction, result))
+        .collect()
+}
+
+fn tmp_maybe_pp_with_offer_result<'a>(
+    transaction: &'a TransactionEnvelope,
+    result: &'a TransactionResultMeta,
+) -> Option<(&'a TransactionEnvelope, &'a TransactionResultMeta)> {
+    if is_path_payment(transaction) {
+        let results = extract_transaction_results(result);
+        let has_offer_result = results.iter().any(|result| {
+            !matches!(
+                result,
+                OperationResultTr::PathPaymentStrictReceive(_)
+                    | OperationResultTr::PathPaymentStrictSend(_)
+            ) && matches!(
+                result,
+                OperationResultTr::ManageBuyOffer(_)
+                    | OperationResultTr::ManageSellOffer(_)
+                    | OperationResultTr::CreatePassiveSellOffer(_)
+            )
+        });
+
+        if has_offer_result {
+            Some((transaction, result))
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
+#[allow(dead_code)]
 pub fn swaps_from_path_payment_results(
     transactions: &[TransactionEnvelope],
     results: &[TransactionResultMeta],
@@ -47,12 +100,12 @@ fn build_operation_ppr_swaps(operation_result: &OperationResultTr) -> Option<Vec
         ))
         | OperationResultTr::PathPaymentStrictSend(PathPaymentStrictSendResult::Success(
             PathPaymentStrictSendResultSuccess { offers, last },
-        )) => build_swaps_from_offers_and_last(offers.as_vec(), last),
+        )) => stub_build_swaps_from_offers_and_last(offers.as_vec(), last),
         _ => None,
     }
 }
-fn build_swaps_from_offers_and_last(
-    offers:&[ClaimAtom],
+fn stub_build_swaps_from_offers_and_last(
+    offers: &[ClaimAtom],
     _last: &SimplePaymentResult,
 ) -> Option<Vec<Swap>> {
     offers.iter().map(|_| Default::default()).collect()
