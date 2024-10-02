@@ -16,7 +16,7 @@ name = "swaps"
 [[tables.columns]]
 name = "creation"
 # u64, timestamp taken from the ledger close time
-col_type = "BYTEA"
+col_type = "BIGINT"
 
 [[tables.columns]]
 name = "stable"
@@ -26,12 +26,12 @@ col_type = "BYTEA"
 [[tables.columns]]
 name = "stableamt"
 # i64, amount of stablecoin in stroops (10^-7 stroops per unit)
-col_type = "BYTEA"
+col_type = "BIGINT"
 
 [[tables.columns]]
 name = "stbl_sold"
 # boolean, false if the stablecoin was bought
-col_type = "BYTEA"
+col_type = "BIGINT"
 
 [[tables.columns]]
 name = "floating"
@@ -42,12 +42,12 @@ col_type = "BYTEA"
 [[tables.columns]]
 name = "numerator"
 # i32, the numerator of the price
-col_type = "BYTEA"
+col_type = "BIGINT"
 
 [[tables.columns]]
 name = "denom"
 # i32, the denominator of the price
-col_type = "BYTEA"
+col_type = "BIGINT"
 
 # This table holds the exchange rates for floatcoins
 [[tables]]
