@@ -3,8 +3,8 @@ use std::fmt::Display;
 use zephyr_sdk::{prelude::*, soroban_sdk::xdr::OfferEntry, DatabaseDerive, EnvClient};
 
 use crate::{
-    config::CONVERSION_FACTOR,
-    utils::{format_asset, is_stablecoin},
+    config::{CONVERSION_FACTOR, USDC},
+    utils::format_asset,
 };
 
 #[derive(DatabaseDerive, Clone)]
@@ -80,7 +80,7 @@ impl Display for Swap {
 
 impl From<OfferEntry> for Swap {
     fn from(offer_entry: OfferEntry) -> Self {
-        if is_stablecoin(&offer_entry.selling) {
+        if offer_entry.selling == USDC {
             Swap {
                 created_at: None,
                 stablecoin: format_asset(&offer_entry.selling),
