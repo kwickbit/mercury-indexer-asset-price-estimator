@@ -12,7 +12,7 @@ pub extern "C" fn on_close() {
     let client = EnvClient::new();
 
     // Read and save the swaps from the latest sequence
-    let swaps = filter::swaps(client.reader().tx_processing(), &client);
+    let swaps = filter::swaps(client.reader().tx_processing());
     db::save_swaps(&client, &swaps);
 
     // If it is time, calculate and save the exchange rates from the latest sequence
