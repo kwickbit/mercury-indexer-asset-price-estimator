@@ -12,6 +12,7 @@ use crate::config::RATE_UPDATE_INTERVAL;
 
 pub fn save_swaps(client: &EnvClient, swaps: &[Swap]) {
     let timestamp = client.reader().ledger_timestamp();
+
     swaps
         .iter()
         .for_each(|swap| SwapDbRow::new(swap, timestamp).put(client));
