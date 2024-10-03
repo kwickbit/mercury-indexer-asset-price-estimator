@@ -1,11 +1,30 @@
 use zephyr_sdk::soroban_sdk::xdr::{
     ManageBuyOfferResult, ManageOfferSuccessResultOffer, ManageSellOfferResult, OperationResultTr,
-    TransactionResultMeta, TransactionResultResult,
+    PathPaymentStrictReceiveResult, PathPaymentStrictSendResult, TransactionResultMeta,
+    TransactionResultResult,
 };
 
 use crate::config::USDC;
 use crate::db::swap::Swap;
 use crate::utils::extract_transaction_results;
+
+pub fn path_payment_results(results: &[TransactionResultMeta]) -> Vec<OperationResultTr> {
+    results
+        .iter()
+        .flat_map(|result| {
+            let operation_results = extract_transaction_results(result);
+            operation_results.into_iter().filter(is_path_payment_result)
+        })
+        .collect()
+}
+
+fn is_path_payment_result(operation_result: &OperationResultTr) -> bool {
+    matches!(
+        operation_result,
+        OperationResultTr::PathPaymentStrictReceive(PathPaymentStrictReceiveResult::Success(_))
+            | OperationResultTr::PathPaymentStrictSend(PathPaymentStrictSendResult::Success(_))
+    )
+}
 
 pub fn swaps(transaction_results: Vec<TransactionResultMeta>) -> Vec<Swap> {
     transaction_results
