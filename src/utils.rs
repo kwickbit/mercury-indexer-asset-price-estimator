@@ -1,18 +1,9 @@
 use zephyr_sdk::soroban_sdk::xdr::{
-    AlphaNum12, AlphaNum4, Asset, OperationBody, OperationResult, OperationResultTr, TransactionEnvelope, TransactionResultMeta, TransactionResultResult
+    AlphaNum12, AlphaNum4, Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0,
+    OperationResult, OperationResultTr, PathPaymentStrictReceiveResult,
+    PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendResult,
+    PathPaymentStrictSendResultSuccess, TransactionResultMeta, TransactionResultResult,
 };
-
-#[allow(dead_code)]
-pub fn extract_transaction_operations(transaction: &TransactionEnvelope) -> Vec<OperationBody> {
-    let operations = match transaction {
-        TransactionEnvelope::TxV0(envelope) => &envelope.tx.operations,
-        TransactionEnvelope::Tx(envelope) => &envelope.tx.operations,
-        _ => &Default::default(),
-    };
-
-    operations.iter().map(|op| op.body.clone()).collect()
-}
-
 
 pub fn extract_transaction_results(result_meta: &TransactionResultMeta) -> Vec<OperationResultTr> {
     match &result_meta.result.result.result {
@@ -24,6 +15,46 @@ pub fn extract_transaction_results(result_meta: &TransactionResultMeta) -> Vec<O
             })
             .collect(),
         _ => Default::default(),
+    }
+}
+
+pub fn extract_claim_atoms_from_path_payment_result(
+    path_payment_result: &OperationResultTr,
+) -> Vec<ClaimAtom> {
+    match path_payment_result {
+        OperationResultTr::PathPaymentStrictReceive(PathPaymentStrictReceiveResult::Success(
+            PathPaymentStrictReceiveResultSuccess { offers, .. },
+        ))
+        | OperationResultTr::PathPaymentStrictSend(PathPaymentStrictSendResult::Success(
+            PathPaymentStrictSendResultSuccess { offers, .. },
+        )) => offers.to_vec(),
+        _ => unreachable!(),
+    }
+}
+
+pub fn extract_claim_atom_data(claim_atom: &ClaimAtom) -> (&Asset, i64, &Asset, i64) {
+    match claim_atom {
+        ClaimAtom::V0(ClaimOfferAtomV0 {
+            asset_sold,
+            amount_sold,
+            asset_bought,
+            amount_bought,
+            ..
+        })
+        | ClaimAtom::OrderBook(ClaimOfferAtom {
+            asset_sold,
+            amount_sold,
+            asset_bought,
+            amount_bought,
+            ..
+        })
+        | ClaimAtom::LiquidityPool(ClaimLiquidityAtom {
+            asset_sold,
+            amount_sold,
+            asset_bought,
+            amount_bought,
+            ..
+        }) => (asset_sold, *amount_sold, asset_bought, *amount_bought),
     }
 }
 
