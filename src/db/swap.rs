@@ -1,10 +1,14 @@
 use std::fmt::Display;
 
-use zephyr_sdk::{prelude::*, soroban_sdk::xdr::OfferEntry, DatabaseDerive, EnvClient};
+use zephyr_sdk::{
+    prelude::*,
+    soroban_sdk::xdr::{ClaimAtom, OfferEntry},
+    DatabaseDerive, EnvClient,
+};
 
 use crate::{
     config::{CONVERSION_FACTOR, USDC},
-    utils::format_asset,
+    utils::{extract_claim_atom_data, format_asset},
 };
 
 #[derive(DatabaseDerive, Clone)]
@@ -17,8 +21,8 @@ pub struct SwapDbRow {
     // stablecoin sale, 0 means a purchase
     pub stbl_sold: i32,
     pub floating: String,
-    pub numerator: i32,
-    pub denom: i32,
+    pub numerator: i64,
+    pub denom: i64,
 }
 
 impl SwapDbRow {
@@ -42,8 +46,8 @@ pub struct Swap {
     pub stablecoin_amount: f64,
     pub is_stablecoin_sale: bool,
     pub floating_asset: String,
-    pub price_numerator: i32,
-    pub price_denominator: i32,
+    pub price_numerator: i64,
+    pub price_denominator: i64,
 }
 
 impl Display for Swap {
@@ -87,8 +91,8 @@ impl From<OfferEntry> for Swap {
                 stablecoin_amount: offer_entry.amount as f64,
                 is_stablecoin_sale: true,
                 floating_asset: format_asset(&offer_entry.buying),
-                price_numerator: offer_entry.price.n,
-                price_denominator: offer_entry.price.d,
+                price_numerator: offer_entry.price.n as i64,
+                price_denominator: offer_entry.price.d as i64,
             }
         } else {
             let amount =
@@ -99,9 +103,43 @@ impl From<OfferEntry> for Swap {
                 stablecoin_amount: amount,
                 is_stablecoin_sale: false,
                 floating_asset: format_asset(&offer_entry.selling),
-                price_numerator: offer_entry.price.d,
-                price_denominator: offer_entry.price.n,
+                price_numerator: offer_entry.price.d as i64,
+                price_denominator: offer_entry.price.n as i64,
             }
+        }
+    }
+}
+
+impl TryFrom<&ClaimAtom> for Swap {
+    type Error = String;
+    fn try_from(claim_atom: &ClaimAtom) -> Result<Self, String> {
+        let (asset_sold, amount_sold, asset_bought, amount_bought) =
+            extract_claim_atom_data(claim_atom);
+
+        let stablecoin = "USDC".to_string();
+
+        if *asset_sold == USDC {
+            Ok(Swap {
+                created_at: None,
+                stablecoin,
+                stablecoin_amount: amount_sold as f64,
+                is_stablecoin_sale: true,
+                floating_asset: format_asset(asset_bought),
+                price_numerator: amount_bought,
+                price_denominator: amount_sold,
+            })
+        } else if *asset_bought == USDC {
+            Ok(Swap {
+                created_at: None,
+                stablecoin,
+                stablecoin_amount: amount_bought as f64,
+                is_stablecoin_sale: false,
+                floating_asset: format_asset(asset_sold),
+                price_numerator: amount_sold,
+                price_denominator: amount_bought,
+            })
+        } else {
+            Err("No USDC was swapped.".into())
         }
     }
 }
