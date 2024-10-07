@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use time::{format_description::well_known::Iso8601, OffsetDateTime};
 use zephyr_sdk::{prelude::*, DatabaseDerive, EnvClient};
 
 use super::swap::SwapDbRow;
@@ -17,6 +18,15 @@ pub struct RatesDbRow {
     pub floating: String,
     pub rate: f64,
     volume: f64,
+}
+
+impl RatesDbRow {
+    pub fn timestamp_iso8601(&self) -> String {
+        OffsetDateTime::from_unix_timestamp(self.timestamp.unwrap() as i64)
+            .unwrap()
+            .format(&Iso8601::DEFAULT)
+            .unwrap()
+    }
 }
 
 impl From<(&String, &(f64, f64))> for RatesDbRow {

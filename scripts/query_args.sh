@@ -5,6 +5,7 @@ parse_arguments() {
     local command=""
     local asset=""
     local date=""
+    local cat_text=""
 
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -40,6 +41,18 @@ parse_arguments() {
                     return 1
                 fi
                 ;;
+            cat)
+                command="cat"
+                shift
+                if [[ $# -gt 0 ]]; then
+                    cat_text=$1
+                    shift
+                fi
+                ;;
+            savepoint)
+                command="savepoint"
+                shift
+                ;;
             *)
                 echo "Error: Unknown argument '$1'" >&2
                 echo "$HELP_MESSAGE" >&2
@@ -53,6 +66,6 @@ parse_arguments() {
         return 1
     fi
 
-    echo "$raw_output:$command:$asset:$date"
+    echo "$raw_output:$command:$asset:$date:$cat_text"
     return 0
 }
