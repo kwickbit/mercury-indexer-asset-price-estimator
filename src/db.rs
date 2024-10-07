@@ -62,7 +62,7 @@ pub fn save_rates(client: &EnvClient) {
 
         rates.iter().for_each(|item| {
             let mut row = RatesDbRow::from(item);
-            row.timestamp = Some(current_timestamp);
+            row.timestamp = current_timestamp;
             row.put(client);
         });
     }

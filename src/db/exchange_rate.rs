@@ -14,7 +14,7 @@ pub type ExchangeRateMap = HashMap<String, (ExchangeRate, UsdVolume)>;
 #[derive(Clone, DatabaseDerive)]
 #[with_name("rates")]
 pub struct RatesDbRow {
-    pub timestamp: Option<u64>,
+    pub timestamp: u64,
     pub floating: String,
     pub rate: f64,
     volume: f64,
@@ -22,7 +22,7 @@ pub struct RatesDbRow {
 
 impl RatesDbRow {
     pub fn timestamp_iso8601(&self) -> String {
-        OffsetDateTime::from_unix_timestamp(self.timestamp.unwrap() as i64)
+        OffsetDateTime::from_unix_timestamp(self.timestamp as i64)
             .unwrap()
             .format(&Iso8601::DEFAULT)
             .unwrap()
@@ -32,7 +32,7 @@ impl RatesDbRow {
 impl From<(&String, &(f64, f64))> for RatesDbRow {
     fn from((floating, (rate, volume)): (&String, &(f64, f64))) -> Self {
         RatesDbRow {
-            timestamp: None,
+            timestamp: 0,
             floating: floating.clone(),
             rate: *rate,
             volume: *volume,
