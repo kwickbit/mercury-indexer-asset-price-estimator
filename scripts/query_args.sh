@@ -66,6 +66,6 @@ parse_arguments() {
         return 1
     fi
 
-    echo "$raw_output:$command:$asset:$date:$cat_text"
+    echo "$raw_output@$command@$asset@$date@$cat_text"
     return 0
 }
