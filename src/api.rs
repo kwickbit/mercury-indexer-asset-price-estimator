@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 use time::{error::Parse, format_description::well_known::Iso8601, OffsetDateTime};
 use zephyr_sdk::EnvClient;
@@ -59,7 +57,7 @@ fn find_exchange_rate(
 }
 
 fn build_ok_response(data: RatesDbRow, request: &ExchangeRateRequest) -> serde_json::Value {
-    let date_time = get_row_timestamp(&data);
+    let date_time = data.timestamp_iso8601();
 
     serde_json::json!({
         "asset": request.asset,
@@ -80,13 +78,6 @@ fn build_not_found_response(request: ExchangeRateRequest) -> serde_json::Value {
     })
 }
 
-fn get_row_timestamp(data: &RatesDbRow) -> String {
-    OffsetDateTime::from_unix_timestamp(data.timestamp.unwrap() as i64)
-        .unwrap()
-        .format(&Iso8601::DEFAULT)
-        .unwrap()
-}
-
 fn find_rate_with_date(
     maybe_date_time: Result<OffsetDateTime, Parse>,
     exchange_rates: &[RatesDbRow],
@@ -102,22 +93,4 @@ fn find_rate_with_date(
             .ok_or(ExchangeRateError::NotFound),
         Err(_) => Err(ExchangeRateError::InvalidDate),
     }
-}
-
-#[no_mangle]
-pub extern "C" fn get_all_exchange_rates() {
-    let client = EnvClient::empty();
-    let exchange_rates = client.read::<RatesDbRow>();
-
-    let response = serde_json::json!(exchange_rates.iter().fold(
-        HashMap::new(),
-        |mut acc: HashMap<String, HashMap<String, String>>, row| {
-            acc.entry(row.floating.clone())
-                .or_default()
-                .insert(get_row_timestamp(row), row.rate.to_string());
-            acc
-        }
-    ));
-
-    client.conclude(&response);
 }

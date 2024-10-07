@@ -10,7 +10,7 @@ if [ $exit_code -ne 0 ]; then
     exit $exit_code
 fi
 
-IFS=':' read -r raw_output command asset date <<< "$result"
+IFS=':' read -r raw_output command asset date cat_text <<< "$result"
 
 if [ "$command" = "all" ]; then
     fname="get_all_exchange_rates"
@@ -20,6 +20,12 @@ elif [ "$command" = "asset" ]; then
     arguments="{\\\"asset\\\": \\\"$asset\\\""
     [ -n "$date" ] && arguments="$arguments, \\\"date\\\": \\\"$date\\\""
     arguments="$arguments}"
+elif [ "$command" = "cat" ]; then
+    fname="cat"
+    arguments="{\\\"text\\\": \\\"$cat_text\\\"}"
+elif [ "$command" = "savepoint" ]; then
+    fname="savepoint"
+    arguments="{}"
 fi
 
 # Set the QUERY variable using a template
