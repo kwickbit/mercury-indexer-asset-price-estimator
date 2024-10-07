@@ -60,15 +60,16 @@ fn find_latest_rate(client: &EnvClient, asset_code: &str) -> Result<RatesDbRow, 
         .ok_or(ExchangeRateError::NotFound)?
         .savepoint;
 
-    client
+    let rates = client
         .read_filter()
         .column_equal_to("timestamp", latest_savepoint)
         .column_equal_to("floating", asset_code.to_string())
-        .read::<RatesDbRow>()
-        .map_err(|_| ExchangeRateError::NotFound)?
-        .first()
-        .cloned()
-        .ok_or(ExchangeRateError::NotFound)
+        .read::<RatesDbRow>();
+
+    match rates {
+        Ok(rates) if !rates.is_empty() => Ok(rates[0].clone()),
+        _ => Err(ExchangeRateError::NotFound),
+    }
 }
 
 fn build_ok_response(data: RatesDbRow, request: &ExchangeRateRequest) -> serde_json::Value {
