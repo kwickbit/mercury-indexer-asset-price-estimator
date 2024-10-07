@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use time::{error::Parse, format_description::well_known::Iso8601, OffsetDateTime};
 use zephyr_sdk::EnvClient;
 
-use crate::db::exchange_rate::RatesDbRow;
+use crate::db::{exchange_rate::RatesDbRow, savepoint::Savepoint};
 
 #[derive(Deserialize, Serialize)]
 pub struct ExchangeRateRequest {
@@ -48,12 +48,27 @@ fn find_exchange_rate(
 
             find_rate_with_date(maybe_date_time, &exchange_rates, request)
         }
-        None => exchange_rates
-            .into_iter()
-            .rev()
-            .find(|row| row.floating == request.asset)
-            .ok_or(ExchangeRateError::NotFound),
+        None => find_latest_rate(client, &request.asset),
     }
+}
+
+fn find_latest_rate(client: &EnvClient, asset_code: &str) -> Result<RatesDbRow, ExchangeRateError> {
+    // There is just one savepoint. But we have to please the borrow checker.
+    let savepoints = client.read::<Savepoint>();
+    let latest_savepoint = savepoints
+        .first()
+        .ok_or(ExchangeRateError::NotFound)?
+        .savepoint;
+
+    client
+        .read_filter()
+        .column_equal_to("timestamp", latest_savepoint)
+        .column_equal_to("floating", asset_code.to_string())
+        .read::<RatesDbRow>()
+        .map_err(|_| ExchangeRateError::NotFound)?
+        .first()
+        .cloned()
+        .ok_or(ExchangeRateError::NotFound)
 }
 
 fn build_ok_response(data: RatesDbRow, request: &ExchangeRateRequest) -> serde_json::Value {
@@ -88,7 +103,9 @@ fn find_rate_with_date(
             .iter()
             .rev()
             .filter(|row| row.floating == request.asset)
-            .find(|row| row.timestamp.unwrap() <= date_time.unix_timestamp() as u64)
+            // We cannot use an Option for the timestamp. So we use 0 where
+            // we'd normally use None.
+            .find(|row| row.timestamp > 0 && row.timestamp <= date_time.unix_timestamp() as u64)
             .cloned()
             .ok_or(ExchangeRateError::NotFound),
         Err(_) => Err(ExchangeRateError::InvalidDate),

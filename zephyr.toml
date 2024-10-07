@@ -7,7 +7,7 @@ name = "savepoint"
 [[tables.columns]]
 name = "savepoint"
 # u64, timestamp taken from the ledger close time
-col_type = "BYTEA"
+col_type = "BIGINT"
 
 # This table holds all the swaps involving our stablecoins of interest
 [[tables]]
@@ -56,7 +56,7 @@ name = "rates"
 [[tables.columns]]
 name = "timestamp"
 # u64, timestamp of the end of the averaging window
-col_type = "BYTEA"
+col_type = "BIGINT"
 
 [[tables.columns]]
 name = "floating"
