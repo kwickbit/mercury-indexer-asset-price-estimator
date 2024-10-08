@@ -102,8 +102,9 @@ fn build_ok_response(rate_data: RatesDbRow, asset: &str) -> serde_json::Value {
         "status": 200,
         "data": {
             "asset": asset,
-            "exchange_rate": rate_data.rate.to_string(),
+            "base_currency": "USD",
             "date_time": date_time,
+            "exchange_rate": rate_data.rate.to_string(),
         }
     })
 }
