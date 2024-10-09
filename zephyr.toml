@@ -12,6 +12,7 @@ col_type = "BIGINT"
 # This table holds all the swaps involving our stablecoins of interest
 [[tables]]
 name = "swaps"
+force = true
 
 [[tables.columns]]
 name = "creation"
@@ -19,23 +20,23 @@ name = "creation"
 col_type = "BIGINT"
 
 [[tables.columns]]
-name = "stable"
-# String, code of the stablecoin
+name = "usdc_amnt"
+# i64, amount of USDC in stroops (10^-7 stroops per unit)
+col_type = "BIGINT"
+
+[[tables.columns]]
+name = "usdc_sale"
+# boolean, 0 (false) if USDC was bought
+col_type = "BIGINT"
+
+[[tables.columns]]
+name = "floatcode"
+# String, code of the floating coin
 col_type = "BYTEA"
 
 [[tables.columns]]
-name = "stableamt"
-# i64, amount of stablecoin in stroops (10^-7 stroops per unit)
-col_type = "BIGINT"
-
-[[tables.columns]]
-name = "stbl_sold"
-# boolean, false if the stablecoin was bought
-col_type = "BIGINT"
-
-[[tables.columns]]
-name = "floating"
-# String, code of the floating coin
+name = "fltissuer"
+# String, address of the floating coin issuer
 col_type = "BYTEA"
 
 # The price is # of units of floating coin per unit of stablecoin
@@ -52,6 +53,7 @@ col_type = "BIGINT"
 # This table holds the exchange rates for floatcoins
 [[tables]]
 name = "rates"
+force = true
 
 [[tables.columns]]
 name = "timestamp"
@@ -59,8 +61,13 @@ name = "timestamp"
 col_type = "BIGINT"
 
 [[tables.columns]]
-name = "floating"
+name = "floatcode"
 # String, code of the floating coin
+col_type = "BYTEA"
+
+[[tables.columns]]
+name = "fltissuer"
+# String, address of the floating coin issuer
 col_type = "BYTEA"
 
 [[tables.columns]]

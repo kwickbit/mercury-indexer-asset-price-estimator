@@ -15,7 +15,8 @@ pub type ExchangeRateMap = HashMap<String, (ExchangeRate, UsdVolume)>;
 #[with_name("rates")]
 pub struct RatesDbRow {
     pub timestamp: u64,
-    pub floating: String,
+    pub floatcode: String,
+    pub fltissuer: String,
     pub rate: f64,
     volume: f64,
 }
@@ -30,10 +31,11 @@ impl RatesDbRow {
 }
 
 impl From<(&String, &(f64, f64))> for RatesDbRow {
-    fn from((floating, (rate, volume)): (&String, &(f64, f64))) -> Self {
+    fn from((floatcode, (rate, volume)): (&String, &(f64, f64))) -> Self {
         RatesDbRow {
             timestamp: 0,
-            floating: floating.clone(),
+            floatcode: floatcode.clone(),
+            fltissuer: "GPLACEHOLDERXYZWQ".to_string(),
             rate: *rate,
             volume: *volume,
         }
@@ -79,14 +81,14 @@ fn extract_amounts<'a>(
     mut counts: HashMap<&'a String, (WeightedSum, UsdVolume)>,
     row: &'a SwapDbRow,
 ) -> HashMap<&'a String, (WeightedSum, UsdVolume)> {
-    let amount: UsdVolume = row.stableamt as f64 / CONVERSION_FACTOR;
+    let amount: UsdVolume = row.usdc_amnt as f64 / CONVERSION_FACTOR;
     let rate: WeightedSum = row.numerator as f64 / row.denom as f64;
 
     // For XLM swaps, we sometimes get weird values, so we don't include them
     if rate != 1e-7 {
         // Update the entry with a running sum of (weighted_sum, total_amount)
         counts
-            .entry(&row.floating)
+            .entry(&row.floatcode)
             .and_modify(|(weighted_sum, total_amount)| {
                 *weighted_sum += amount * rate;
                 *total_amount += amount;

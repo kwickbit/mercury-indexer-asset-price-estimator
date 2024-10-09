@@ -36,7 +36,7 @@ pub extern "C" fn get_all_exchange_rates() {
     let response = serde_json::json!(exchange_rates.iter().fold(
         HashMap::new(),
         |mut acc: HashMap<String, HashMap<String, String>>, row| {
-            acc.entry(row.floating.clone())
+            acc.entry(row.floatcode.clone())
                 .or_default()
                 .insert(row.timestamp_iso8601(), row.rate.to_string());
             acc

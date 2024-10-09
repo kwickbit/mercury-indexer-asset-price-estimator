@@ -86,7 +86,8 @@ where
     let mut query = client.read_filter();
     filter(&mut query);
     let rates = query
-        .column_equal_to("floating", asset_code.to_string())
+        .column_equal_to("floatcode", asset_code.to_string())
+        .column_equal_to("fltissuer", "GPLACEHOLDERXYZWQ".to_string())
         .read::<RatesDbRow>();
 
     match rates {
