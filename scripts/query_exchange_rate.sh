@@ -29,7 +29,7 @@ elif [ "$command" = "savepoint" ]; then
 fi
 
 # Set the QUERY variable using a template
-QUERY="{\"project_name\": \"indexer\", \"mode\": {\"Function\": {\"fname\": \"$fname\", \"arguments\": \"$arguments\"}}}"
+QUERY="{\"project_name\": \"kwickbit\", \"mode\": {\"Function\": {\"fname\": \"$fname\", \"arguments\": \"$arguments\"}}}"
 
 # Call the API, suppressing progress output from `curl`
 curl -s -X POST https://mainnet.mercurydata.app/zephyr/execute \
