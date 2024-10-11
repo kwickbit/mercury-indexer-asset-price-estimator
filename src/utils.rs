@@ -1,5 +1,5 @@
 use zephyr_sdk::soroban_sdk::xdr::{
-    AlphaNum12, AlphaNum4, Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, OperationResult, OperationResultTr, PathPaymentStrictReceiveResult, PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendResult, PathPaymentStrictSendResultSuccess, PublicKey, TransactionResultMeta, TransactionResultResult
+    AlphaNum12, AlphaNum4, Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, OperationResult, OperationResultTr, PathPaymentStrictReceiveResult, PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendResult, PathPaymentStrictSendResultSuccess, TransactionResultMeta, TransactionResultResult
 };
 
 pub fn extract_transaction_results(result_meta: &TransactionResultMeta) -> Vec<OperationResultTr> {
@@ -81,9 +81,6 @@ fn bytes_to_string(bytes: &[u8]) -> &str {
 pub fn format_asset_issuer(asset: &Asset) -> String {
     match asset {
         Asset::Native => "Native".to_string(),
-        Asset::CreditAlphanum4(AlphaNum4 { issuer, .. }) | Asset::CreditAlphanum12(AlphaNum12 { issuer, .. }) => {
-            let PublicKey::PublicKeyTypeEd25519(uint256) = &issuer.0;
-            String::from_utf8(hex::decode(uint256).unwrap()).unwrap()
-        },
+        Asset::CreditAlphanum4(AlphaNum4 { issuer, .. }) | Asset::CreditAlphanum12(AlphaNum12 { issuer, .. }) => issuer.to_string(),
     }
 }
