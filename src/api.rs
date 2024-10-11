@@ -6,7 +6,8 @@ use crate::db::{exchange_rate::RatesDbRow, savepoint::Savepoint};
 
 #[derive(Deserialize, Serialize)]
 pub struct ExchangeRateRequest {
-    asset: String,
+    asset_code: String,
+    asset_issuer: String,
     date: Option<String>,
 }
 
@@ -21,7 +22,7 @@ pub extern "C" fn get_exchange_rate() {
     let request = client.read_request_body::<ExchangeRateRequest>();
 
     let response = match find_exchange_rate(&client, &request) {
-        Ok(data) => build_ok_response(data, &request.asset),
+        Ok(data) => build_ok_response(data, &request),
         Err(ExchangeRateError::NotFound) => build_not_found_response(request),
         Err(ExchangeRateError::InvalidDate) => {
             serde_json::json!({
@@ -52,17 +53,22 @@ fn find_exchange_rate(
     match possible_request_date_time {
         Some(Ok(request_date_time)) => {
             let timestamp = request_date_time.assume_utc().unix_timestamp();
+
             let filter = |query: &mut TableQueryWrapper| {
                 query.column_lt("timestamp", timestamp);
             };
-            find_rate(client, &request.asset, filter)
+
+            find_rate(client, request, filter)
         }
         Some(Err(_)) => Err(ExchangeRateError::InvalidDate),
-        None => find_latest_rate(client, &request.asset),
+        None => find_latest_rate(client, request),
     }
 }
 
-fn find_latest_rate(client: &EnvClient, asset_code: &str) -> Result<RatesDbRow, ExchangeRateError> {
+fn find_latest_rate(
+    client: &EnvClient,
+    request: &ExchangeRateRequest,
+) -> Result<RatesDbRow, ExchangeRateError> {
     let savepoints = client.read::<Savepoint>();
 
     let latest_savepoint = savepoints
@@ -70,14 +76,14 @@ fn find_latest_rate(client: &EnvClient, asset_code: &str) -> Result<RatesDbRow, 
         .ok_or(ExchangeRateError::NotFound)?
         .savepoint;
 
-    find_rate(client, asset_code, |query| {
+    find_rate(client, request, |query| {
         query.column_equal_to("timestamp", latest_savepoint);
     })
 }
 
 fn find_rate<F>(
     client: &EnvClient,
-    asset_code: &str,
+    request: &ExchangeRateRequest,
     filter: F,
 ) -> Result<RatesDbRow, ExchangeRateError>
 where
@@ -86,8 +92,8 @@ where
     let mut query = client.read_filter();
     filter(&mut query);
     let rates = query
-        .column_equal_to("floatcode", asset_code.to_string())
-        .column_equal_to("fltissuer", "GPLACEHOLDERXYZWQ".to_string())
+        .column_equal_to("floatcode", request.asset_code.to_string())
+        .column_equal_to("fltissuer", request.asset_issuer.clone())
         .read::<RatesDbRow>();
 
     match rates {
@@ -96,13 +102,14 @@ where
     }
 }
 
-fn build_ok_response(rate_data: RatesDbRow, asset: &str) -> serde_json::Value {
+fn build_ok_response(rate_data: RatesDbRow, request: &ExchangeRateRequest) -> serde_json::Value {
     let date_time = rate_data.timestamp_iso8601();
 
     serde_json::json!({
         "status": 200,
         "data": {
-            "asset": asset,
+            "asset": request.asset_code,
+            "issuer": request.asset_issuer,
             "base_currency": "USD",
             "date_time": date_time,
             "exchange_rate": rate_data.rate.to_string(),
@@ -119,7 +126,7 @@ fn build_not_found_response(request: ExchangeRateRequest) -> serde_json::Value {
     serde_json::json!({
         "status": 404,
         "data": {
-            "asset": request.asset,
+            "asset": request.asset_code,
             "error": error,
         },
     })

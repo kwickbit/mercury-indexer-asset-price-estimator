@@ -8,7 +8,7 @@ use zephyr_sdk::{
 
 use crate::{
     config::{CONVERSION_FACTOR, USDC},
-    utils::{extract_claim_atom_data, format_asset},
+    utils::{extract_claim_atom_data, format_asset_code, format_asset_issuer},
 };
 
 #[derive(DatabaseDerive, Clone)]
@@ -51,11 +51,7 @@ pub struct Swap {
 
 impl Display for Swap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let direction = if self.is_usdc_sale {
-            "(sell)"
-        } else {
-            "(buy)"
-        };
+        let direction = if self.is_usdc_sale { "(sell)" } else { "(buy)" };
 
         let timestamp = self
             .created_at
@@ -88,8 +84,8 @@ impl From<OfferEntry> for Swap {
                 created_at: None,
                 usdc_amount: offer_entry.amount as f64,
                 is_usdc_sale: true,
-                floating_asset_code: format_asset(&offer_entry.buying),
-                floating_asset_issuer: "GPLACEHOLDERXYZWQ".to_string(),
+                floating_asset_code: format_asset_code(&offer_entry.buying),
+                floating_asset_issuer: format_asset_issuer(&offer_entry.buying),
                 price_numerator: offer_entry.price.n as i64,
                 price_denominator: offer_entry.price.d as i64,
             }
@@ -100,8 +96,8 @@ impl From<OfferEntry> for Swap {
                 created_at: None,
                 usdc_amount: amount,
                 is_usdc_sale: false,
-                floating_asset_code: format_asset(&offer_entry.selling),
-                floating_asset_issuer: "GPLACEHOLDERXYZWQ".to_string(),
+                floating_asset_code: format_asset_code(&offer_entry.selling),
+                floating_asset_issuer: format_asset_issuer(&offer_entry.selling),
                 price_numerator: offer_entry.price.d as i64,
                 price_denominator: offer_entry.price.n as i64,
             }
@@ -120,8 +116,8 @@ impl TryFrom<&ClaimAtom> for Swap {
                 created_at: None,
                 usdc_amount: amount_sold as f64,
                 is_usdc_sale: true,
-                floating_asset_code: format_asset(asset_bought),
-                floating_asset_issuer: "GPLACEHOLDERXYZWQ".to_string(),
+                floating_asset_code: format_asset_code(asset_bought),
+                floating_asset_issuer: format_asset_issuer(asset_bought),
                 price_numerator: amount_bought,
                 price_denominator: amount_sold,
             })
@@ -130,8 +126,8 @@ impl TryFrom<&ClaimAtom> for Swap {
                 created_at: None,
                 usdc_amount: amount_bought as f64,
                 is_usdc_sale: false,
-                floating_asset_code: format_asset(asset_sold),
-                floating_asset_issuer: "GPLACEHOLDERXYZWQ".to_string(),
+                floating_asset_code: format_asset_code(asset_sold),
+                floating_asset_issuer: format_asset_issuer(asset_sold),
                 price_numerator: amount_sold,
                 price_denominator: amount_bought,
             })
@@ -148,7 +144,7 @@ impl From<&SwapDbRow> for Swap {
             usdc_amount: row.usdc_amnt as f64,
             is_usdc_sale: row.usdc_sale == 1,
             floating_asset_code: row.floatcode.to_string(),
-            floating_asset_issuer: "GPLACEHOLDERXYZWQ".to_string(),
+            floating_asset_issuer: row.fltissuer.to_string(),
             price_numerator: row.numerator,
             price_denominator: row.denom,
         }
