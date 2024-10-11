@@ -1,4 +1,4 @@
-name = "indexer"
+name = "kwickbit"
 
 # We store the latest time the exchange rates were saved
 [[tables]]
