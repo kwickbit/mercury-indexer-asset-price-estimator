@@ -1,8 +1,5 @@
 use zephyr_sdk::soroban_sdk::xdr::{
-    AlphaNum12, AlphaNum4, Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0,
-    OperationResult, OperationResultTr, PathPaymentStrictReceiveResult,
-    PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendResult,
-    PathPaymentStrictSendResultSuccess, TransactionResultMeta, TransactionResultResult,
+    AlphaNum12, AlphaNum4, Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, OperationResult, OperationResultTr, PathPaymentStrictReceiveResult, PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendResult, PathPaymentStrictSendResultSuccess, PublicKey, TransactionResultMeta, TransactionResultResult
 };
 
 pub fn extract_transaction_results(result_meta: &TransactionResultMeta) -> Vec<OperationResultTr> {
@@ -58,7 +55,7 @@ pub fn extract_claim_atom_data(claim_atom: &ClaimAtom) -> (&Asset, i64, &Asset, 
     }
 }
 
-pub fn format_asset(asset: &Asset) -> String {
+pub fn format_asset_code(asset: &Asset) -> String {
     match asset {
         Asset::Native => "XLM".to_string(),
         Asset::CreditAlphanum4(AlphaNum4 { asset_code, .. }) => {
@@ -79,4 +76,14 @@ fn format_nonnative_asset(asset_code: &[u8]) -> String {
 
 fn bytes_to_string(bytes: &[u8]) -> &str {
     std::str::from_utf8(bytes).unwrap_or("Unreadable")
+}
+
+pub fn format_asset_issuer(asset: &Asset) -> String {
+    match asset {
+        Asset::Native => "Native".to_string(),
+        Asset::CreditAlphanum4(AlphaNum4 { issuer, .. }) | Asset::CreditAlphanum12(AlphaNum12 { issuer, .. }) => {
+            let PublicKey::PublicKeyTypeEd25519(uint256) = &issuer.0;
+            String::from_utf8(hex::decode(uint256).unwrap()).unwrap()
+        },
+    }
 }

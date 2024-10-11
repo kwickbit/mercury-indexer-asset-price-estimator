@@ -31,11 +31,13 @@ impl RatesDbRow {
 }
 
 impl From<(&String, &(f64, f64))> for RatesDbRow {
-    fn from((floatcode, (rate, volume)): (&String, &(f64, f64))) -> Self {
+    fn from((floating_asset, (rate, volume)): (&String, &(f64, f64))) -> Self {
+        let (floatcode, fltissuer) = floating_asset.split_once('_').unwrap();
+
         RatesDbRow {
             timestamp: 0,
-            floatcode: floatcode.clone(),
-            fltissuer: "GPLACEHOLDERXYZWQ".to_string(),
+            floatcode: floatcode.to_string(),
+            fltissuer: fltissuer.to_string(),
             rate: *rate,
             volume: *volume,
         }
@@ -72,23 +74,25 @@ fn calculate_rates(swaps: Vec<SwapDbRow>) -> ExchangeRateMap {
         .fold(HashMap::new(), extract_amounts)
         .into_iter()
         .map(|(key, (weighted_sum, total_amount))| {
-            (key.to_owned(), (weighted_sum / total_amount, total_amount))
+            (key, (weighted_sum / total_amount, total_amount))
         })
         .collect::<ExchangeRateMap>()
 }
 
-fn extract_amounts<'a>(
-    mut counts: HashMap<&'a String, (WeightedSum, UsdVolume)>,
-    row: &'a SwapDbRow,
-) -> HashMap<&'a String, (WeightedSum, UsdVolume)> {
+// Comment
+fn extract_amounts(
+    mut counts: HashMap<String, (WeightedSum, UsdVolume)>,
+    row: &SwapDbRow,
+) -> HashMap<String, (WeightedSum, UsdVolume)> {
     let amount: UsdVolume = row.usdc_amnt as f64 / CONVERSION_FACTOR;
     let rate: WeightedSum = row.numerator as f64 / row.denom as f64;
+    let key = format!("{}_{}", row.floatcode, row.fltissuer);
 
     // For XLM swaps, we sometimes get weird values, so we don't include them
     if rate != 1e-7 {
         // Update the entry with a running sum of (weighted_sum, total_amount)
         counts
-            .entry(&row.floatcode)
+            .entry(key)
             .and_modify(|(weighted_sum, total_amount)| {
                 *weighted_sum += amount * rate;
                 *total_amount += amount;
