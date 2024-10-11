@@ -1,15 +1,14 @@
 use std::vec;
 
 use zephyr_sdk::soroban_sdk::xdr::{
-    ManageBuyOfferResult, ManageOfferSuccessResult, ManageOfferSuccessResultOffer, ManageSellOfferResult, OperationResultTr, PathPaymentStrictReceiveResult, PathPaymentStrictSendResult, TransactionResultMeta, TransactionResultResult
+    ManageBuyOfferResult, ManageOfferSuccessResult, ManageOfferSuccessResultOffer,
+    ManageSellOfferResult, OperationResultTr, PathPaymentStrictReceiveResult,
+    PathPaymentStrictSendResult, TransactionResultMeta, TransactionResultResult,
 };
-use zephyr_sdk::EnvClient;
 
 use crate::config::USDC;
 use crate::db::swap::Swap;
-use crate::utils::{
-    extract_claim_atoms_from_path_payment_result, extract_transaction_results,
-};
+use crate::utils::{extract_claim_atoms_from_path_payment_result, extract_transaction_results};
 
 /*
 We fish every swap from each ledger close. There is a lot of Vec flattening because:
@@ -23,11 +22,11 @@ If its result is of an Offer type, it can have one swap, if one of the assets
 involved is USDC.
 Path payments can have more than one swap so we always build Vecs of swaps.
 */
-pub fn swaps(transaction_results: Vec<TransactionResultMeta>, client: &EnvClient) -> Vec<Swap> {
+pub fn swaps(transaction_results: Vec<TransactionResultMeta>) -> Vec<Swap> {
     transaction_results
         .iter()
         .filter(is_transaction_successful)
-        .flat_map(|txn| swaps_from_transaction(txn, client))
+        .flat_map(swaps_from_transaction)
         .collect()
 }
 
@@ -38,30 +37,27 @@ fn is_transaction_successful(transaction: &&TransactionResultMeta) -> bool {
     )
 }
 
-fn swaps_from_transaction(transaction: &TransactionResultMeta, client: &EnvClient) -> Vec<Swap> {
+fn swaps_from_transaction(transaction: &TransactionResultMeta) -> Vec<Swap> {
     let operations = extract_transaction_results(transaction);
-    operations
-        .iter()
-        .flat_map(|op| swaps_from_operation(op, client))
-        .collect()
+    operations.iter().flat_map(swaps_from_operation).collect()
 }
 
-fn swaps_from_operation(operation: &OperationResultTr, client: &EnvClient) -> Vec<Swap> {
+fn swaps_from_operation(operation: &OperationResultTr) -> Vec<Swap> {
     match operation {
         OperationResultTr::ManageSellOffer(ManageSellOfferResult::Success(offer_result))
         | OperationResultTr::CreatePassiveSellOffer(ManageSellOfferResult::Success(offer_result))
         | OperationResultTr::ManageBuyOffer(ManageBuyOfferResult::Success(offer_result)) => {
-            swap_from_offer(offer_result, client)
+            swap_from_offer(offer_result)
         }
         OperationResultTr::PathPaymentStrictReceive(PathPaymentStrictReceiveResult::Success(_))
         | OperationResultTr::PathPaymentStrictSend(PathPaymentStrictSendResult::Success(_)) => {
-            swaps_from_path_payment(operation, client)
+            swaps_from_path_payment(operation)
         }
         _ => Vec::new(),
     }
 }
 
-fn swap_from_offer(offer_result: &ManageOfferSuccessResult, client: &EnvClient) -> Vec<Swap> {
+fn swap_from_offer(offer_result: &ManageOfferSuccessResult) -> Vec<Swap> {
     match &offer_result.offer {
         ManageOfferSuccessResultOffer::Created(offer_entry)
         | ManageOfferSuccessResultOffer::Updated(offer_entry)
@@ -73,7 +69,7 @@ fn swap_from_offer(offer_result: &ManageOfferSuccessResult, client: &EnvClient) 
     }
 }
 
-fn swaps_from_path_payment(operation_result: &OperationResultTr, client: &EnvClient) -> Vec<Swap> {
+fn swaps_from_path_payment(operation_result: &OperationResultTr) -> Vec<Swap> {
     let claim_atoms = extract_claim_atoms_from_path_payment_result(operation_result);
 
     claim_atoms
