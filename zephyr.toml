@@ -12,7 +12,6 @@ col_type = "BIGINT"
 # This table holds all the swaps involving our stablecoins of interest
 [[tables]]
 name = "swaps"
-force = true
 
 [[tables.columns]]
 name = "creation"
@@ -53,7 +52,6 @@ col_type = "BIGINT"
 # This table holds the exchange rates for floatcoins
 [[tables]]
 name = "rates"
-force = true
 
 [[tables.columns]]
 name = "timestamp"

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use zephyr_sdk::EnvClient;
 
@@ -33,15 +34,26 @@ pub extern "C" fn get_all_exchange_rates() {
     let client = EnvClient::empty();
     let exchange_rates = client.read::<RatesDbRow>();
 
-    let response = serde_json::json!(exchange_rates.iter().fold(
-        HashMap::new(),
-        |mut acc: HashMap<String, HashMap<String, String>>, row| {
-            acc.entry(row.floatcode.clone())
-                .or_default()
-                .insert(row.timestamp_iso8601(), row.rate.to_string());
-            acc
-        }
-    ));
+    let response = exchange_rates
+        .into_iter()
+        .chunk_by(|row| (row.floatcode.clone(), row.fltissuer.clone()))
+        .into_iter()
+        .map(|((asset_code, asset_issuer), group)| {
+            serde_json::json!({
+                "asset_code": asset_code,
+                "asset_issuer": asset_issuer,
+                "rates": group.map(rates_from_row).collect::<Vec<_>>()
+            })
+        })
+        .collect::<Vec<_>>();
 
-    client.conclude(&response);
+    // Create the final response
+    client.conclude(response);
+}
+
+fn rates_from_row(row: RatesDbRow) -> HashMap<String, String> {
+    HashMap::from([
+        ("date".to_string(), row.timestamp_iso8601()),
+        ("rate".to_string(), row.rate.to_string()),
+    ])
 }
