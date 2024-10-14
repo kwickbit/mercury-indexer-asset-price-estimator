@@ -3,7 +3,8 @@
 parse_arguments() {
     local raw_output=false
     local command=""
-    local asset=""
+    local asset_code=""
+    local asset_issuer=""
     local date=""
     local cat_text=""
 
@@ -26,11 +27,16 @@ parse_arguments() {
                 shift
                 if [[ $# -gt 0 ]]; then
                     if [[ "$1" =~ ^[a-z]+$ ]]; then
-                        asset=${1^^}
+                        asset_code=${1^^}
                     else
-                        asset=$1
+                        asset_code=$1
                     fi
                     shift
+                    # Check for optional asset_issuer argument
+                    if [[ $# -gt 0 && "$1" =~ ^G[A-Z0-9]{55}$ ]]; then
+                        asset_issuer=$1
+                        shift
+                    fi
                     # Check for optional date argument
                     if [[ $# -gt 0 && "$1" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$ ]]; then
                         date=$1
@@ -66,6 +72,6 @@ parse_arguments() {
         return 1
     fi
 
-    echo "$raw_output@$command@$asset@$date@$cat_text"
+    echo "$raw_output@$command@$asset_code@$asset_issuer@$date@$cat_text"
     return 0
 }

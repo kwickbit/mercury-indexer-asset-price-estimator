@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use time::format_description::well_known::Iso8601;
 use zephyr_sdk::{prelude::TableQueryWrapper, EnvClient};
@@ -7,7 +9,7 @@ use crate::db::{exchange_rate::RatesDbRow, savepoint::Savepoint};
 #[derive(Deserialize, Serialize)]
 pub struct ExchangeRateRequest {
     asset_code: String,
-    asset_issuer: String,
+    asset_issuer: Option<String>,
     date: Option<String>,
 }
 
@@ -22,7 +24,7 @@ pub extern "C" fn get_exchange_rate() {
     let request = client.read_request_body::<ExchangeRateRequest>();
 
     let response = match find_exchange_rate(&client, &request) {
-        Ok(data) => build_ok_response(data, &request),
+        Ok(data) => build_ok_response(data),
         Err(ExchangeRateError::NotFound) => build_not_found_response(request),
         Err(ExchangeRateError::InvalidDate) => {
             serde_json::json!({
@@ -39,10 +41,12 @@ pub extern "C" fn get_exchange_rate() {
 
 // We find the latest exchange rate for the requested asset before the
 // requested date, or the latest exchange rate if no date is provided.
+// The user might provide an issuer as well; if they do, we look only
+// for that issuer, otherwise we get all assets with that code.
 fn find_exchange_rate(
     client: &EnvClient,
     request: &ExchangeRateRequest,
-) -> Result<RatesDbRow, ExchangeRateError> {
+) -> Result<Vec<RatesDbRow>, ExchangeRateError> {
     let possible_request_date_time = request
         .date
         .as_ref()
@@ -68,7 +72,7 @@ fn find_exchange_rate(
 fn find_latest_rate(
     client: &EnvClient,
     request: &ExchangeRateRequest,
-) -> Result<RatesDbRow, ExchangeRateError> {
+) -> Result<Vec<RatesDbRow>, ExchangeRateError> {
     let savepoints = client.read::<Savepoint>();
 
     let latest_savepoint = savepoints
@@ -85,35 +89,35 @@ fn find_rate<F>(
     client: &EnvClient,
     request: &ExchangeRateRequest,
     filter: F,
-) -> Result<RatesDbRow, ExchangeRateError>
+) -> Result<Vec<RatesDbRow>, ExchangeRateError>
 where
     F: FnOnce(&mut TableQueryWrapper),
 {
     let mut query = client.read_filter();
     filter(&mut query);
-    let rates = query
-        .column_equal_to("floatcode", request.asset_code.to_string())
-        .column_equal_to("fltissuer", request.asset_issuer.clone())
-        .read::<RatesDbRow>();
 
-    match rates {
-        Ok(rates) if !rates.is_empty() => Ok(rates.last().unwrap().clone()),
-        _ => Err(ExchangeRateError::NotFound),
+    if let Some(issuer) = &request.asset_issuer {
+        query.column_equal_to("fltissuer", issuer.to_string());
     }
+
+    query
+        .column_equal_to("floatcode", request.asset_code.to_string())
+        .read::<RatesDbRow>()
+        .map_err(|_| ExchangeRateError::NotFound)
 }
 
-fn build_ok_response(rate_data: RatesDbRow, request: &ExchangeRateRequest) -> serde_json::Value {
-    let date_time = rate_data.timestamp_iso8601();
-
+fn build_ok_response(rate_data: Vec<RatesDbRow>) -> serde_json::Value {
     serde_json::json!({
         "status": 200,
-        "data": {
-            "asset": request.asset_code,
-            "issuer": request.asset_issuer,
-            "base_currency": "USD",
-            "date_time": date_time,
-            "exchange_rate": rate_data.rate.to_string(),
-        }
+        "data": rate_data.iter().map(|row| {
+            HashMap::from([
+                ("asset_code", row.floatcode.clone()),
+                ("asset_issuer" , row.fltissuer.clone()),
+                ("base_currency", "USD".into()),
+                ("date_time", row.timestamp_iso8601()),
+                ("exchange_rate", row.rate.to_string()),
+            ])
+        }).collect::<Vec<_>>(),
     })
 }
 

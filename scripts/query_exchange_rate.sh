@@ -10,14 +10,15 @@ if [ $exit_code -ne 0 ]; then
     exit $exit_code
 fi
 
-IFS='@' read -r raw_output command asset date cat_text <<< "$result"
+IFS='@' read -r raw_output command asset_code asset_issuer date cat_text <<< "$result"
 
 if [ "$command" = "all" ]; then
     fname="get_all_exchange_rates"
     arguments="{}"
 elif [ "$command" = "asset" ]; then
     fname="get_exchange_rate"
-    arguments="{\\\"asset\\\": \\\"$asset\\\""
+    arguments="{\\\"asset_code\\\": \\\"$asset_code\\\""
+    [ -n "$asset_issuer" ] && arguments="$arguments, \\\"asset_issuer\\\": \\\"$asset_issuer\\\""
     [ -n "$date" ] && arguments="$arguments, \\\"date\\\": \\\"$date\\\""
     arguments="$arguments}"
 elif [ "$command" = "cat" ]; then
