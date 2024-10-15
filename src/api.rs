@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cmp::Ordering::Equal, collections::HashMap};
 
 use serde::{Deserialize, Serialize};
 use time::format_description::well_known::Iso8601;
@@ -58,9 +58,16 @@ fn validate_request(request: ExchangeRateRequest) -> Result<ValidatedRequest, Ex
         None => None,
     };
 
+    // We don't allow non-native tokens named XLM.
+    let asset_issuer = if request.asset_code == "XLM" {
+        Some("Native".to_string())
+    } else {
+        request.asset_issuer
+    };
+
     Ok(ValidatedRequest {
         asset_code: request.asset_code,
-        asset_issuer: request.asset_issuer,
+        asset_issuer,
         timestamp,
     })
 }
@@ -113,16 +120,19 @@ fn process_results(
     }
 }
 
-fn build_ok_response(rate_data: Vec<RatesDbRow>) -> serde_json::Value {
+fn build_ok_response(mut rate_data: Vec<RatesDbRow>) -> serde_json::Value {
+    rate_data.sort_by(|a, b| b.volume.partial_cmp(&a.volume).unwrap_or(Equal));
+
     serde_json::json!({
         "status": 200,
-        "data": rate_data.iter().map(|row| {
+        "data": rate_data.into_iter().map(|row| {
             serde_json::json!({
                 "asset_code": row.floatcode,
                 "asset_issuer": row.fltissuer,
                 "base_currency": "USD",
                 "date_time": row.timestamp_iso8601(),
                 "exchange_rate": row.rate.to_string(),
+                "volume": row.volume.to_string(),
             })
         }).collect::<Vec<_>>(),
     })

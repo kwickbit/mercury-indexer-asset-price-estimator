@@ -18,7 +18,7 @@ pub struct RatesDbRow {
     pub floatcode: String,
     pub fltissuer: String,
     pub rate: f64,
-    volume: f64,
+    pub volume: f64,
 }
 
 impl RatesDbRow {
