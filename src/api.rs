@@ -99,7 +99,9 @@ fn process_results(
 ) -> Result<Vec<RatesDbRow>, ExchangeRateError> {
     let processed_results = results.into_iter().fold(HashMap::new(), |mut acc, row| {
         if request.asset_issuer.as_ref() == Some(&row.fltissuer) || request.asset_issuer.is_none() {
-            acc.entry(row.fltissuer.clone()).or_insert(row);
+            acc.entry(row.fltissuer.clone())
+                .and_modify(|entry| *entry = row.clone())
+                .or_insert(row);
         }
         acc
     });
