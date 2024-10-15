@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use time::format_description::well_known::Iso8601;
-use zephyr_sdk::{prelude::TableQueryWrapper, EnvClient};
+use zephyr_sdk::EnvClient;
 
 use crate::db::{exchange_rate::RatesDbRow, savepoint::Savepoint};
 
@@ -14,8 +14,15 @@ pub struct ExchangeRateRequest {
 }
 
 enum ExchangeRateError {
-    NotFound,
+    DatabaseError,
     InvalidDate,
+    NotFound,
+}
+
+struct ValidatedRequest {
+    asset_code: String,
+    asset_issuer: Option<String>,
+    timestamp: Option<i64>,
 }
 
 #[no_mangle]
@@ -23,115 +30,116 @@ pub extern "C" fn get_exchange_rate() {
     let client = EnvClient::empty();
     let request = client.read_request_body::<ExchangeRateRequest>();
 
-    let response = match find_exchange_rate(&client, &request) {
+    let response = match handle_request(&client, request) {
         Ok(data) => build_ok_response(data),
-        Err(ExchangeRateError::NotFound) => build_not_found_response(request),
-        Err(ExchangeRateError::InvalidDate) => {
-            serde_json::json!({
-                "status": 400,
-                "data": {
-                    "error": "Invalid date format. Please use the format '2020-09-16T14:30:00'.",
-                },
-            })
-        }
+        Err(error) => build_error_response(error),
     };
 
     client.conclude(&response);
 }
 
-// We find the latest exchange rate for the requested asset before the
-// requested date, or the latest exchange rate if no date is provided.
-// The user might provide an issuer as well; if they do, we look only
-// for that issuer, otherwise we get all assets with that code.
-fn find_exchange_rate(
+fn handle_request(
     client: &EnvClient,
-    request: &ExchangeRateRequest,
+    request: ExchangeRateRequest,
 ) -> Result<Vec<RatesDbRow>, ExchangeRateError> {
-    let possible_request_date_time = request
-        .date
-        .as_ref()
-        .map(|date_str| time::PrimitiveDateTime::parse(date_str, &Iso8601::DEFAULT));
-
-    // There are three possibilities: the user has provided a valid date, an
-    // invalid one or none at all.
-    match possible_request_date_time {
-        Some(Ok(request_date_time)) => {
-            let timestamp = request_date_time.assume_utc().unix_timestamp();
-
-            let filter = |query: &mut TableQueryWrapper| {
-                query.column_lt("timestamp", timestamp);
-            };
-
-            find_rate(client, request, filter)
-        }
-        Some(Err(_)) => Err(ExchangeRateError::InvalidDate),
-        None => find_latest_rate(client, request),
-    }
+    let validated_request = validate_request(request)?;
+    let db_results = query_database(client, &validated_request)?;
+    process_results(db_results, &validated_request)
 }
 
-fn find_latest_rate(
-    client: &EnvClient,
-    request: &ExchangeRateRequest,
-) -> Result<Vec<RatesDbRow>, ExchangeRateError> {
-    let savepoints = client.read::<Savepoint>();
+fn validate_request(request: ExchangeRateRequest) -> Result<ValidatedRequest, ExchangeRateError> {
+    let timestamp = match request.date {
+        Some(date_str) => Some(
+            time::PrimitiveDateTime::parse(&date_str, &Iso8601::DEFAULT)
+                .map_err(|_| ExchangeRateError::InvalidDate)?
+                .assume_utc()
+                .unix_timestamp(),
+        ),
+        None => None,
+    };
 
-    let latest_savepoint = savepoints
-        .first()
-        .ok_or(ExchangeRateError::NotFound)?
-        .savepoint;
-
-    find_rate(client, request, |query| {
-        query.column_equal_to("timestamp", latest_savepoint);
+    Ok(ValidatedRequest {
+        asset_code: request.asset_code,
+        asset_issuer: request.asset_issuer,
+        timestamp,
     })
 }
 
-fn find_rate<F>(
+fn query_database(
     client: &EnvClient,
-    request: &ExchangeRateRequest,
-    filter: F,
-) -> Result<Vec<RatesDbRow>, ExchangeRateError>
-where
-    F: FnOnce(&mut TableQueryWrapper),
-{
+    params: &ValidatedRequest,
+) -> Result<Vec<RatesDbRow>, ExchangeRateError> {
     let mut query = client.read_filter();
-    filter(&mut query);
+    query.column_equal_to("floatcode", params.asset_code.clone());
 
-    if let Some(issuer) = &request.asset_issuer {
-        query.column_equal_to("fltissuer", issuer.to_string());
+    if let Some(issuer) = &params.asset_issuer {
+        query.column_equal_to("fltissuer", issuer.clone());
     }
 
+    let timestamp = match params.timestamp {
+        Some(timestamp) => timestamp,
+        None => {
+            client
+                .read::<Savepoint>()
+                .first()
+                .ok_or(ExchangeRateError::NotFound)?
+                .savepoint as i64
+        }
+    };
+
     query
-        .column_equal_to("floatcode", request.asset_code.to_string())
+        .column_lt("timestamp", timestamp)
         .read::<RatesDbRow>()
-        .map_err(|_| ExchangeRateError::NotFound)
+        .map_err(|_| ExchangeRateError::DatabaseError)
+}
+
+fn process_results(
+    results: Vec<RatesDbRow>,
+    request: &ValidatedRequest,
+) -> Result<Vec<RatesDbRow>, ExchangeRateError> {
+    let processed_results = results.into_iter().fold(HashMap::new(), |mut acc, row| {
+        if request.asset_issuer.as_ref() == Some(&row.fltissuer) || request.asset_issuer.is_none() {
+            acc.entry(row.fltissuer.clone()).or_insert(row);
+        }
+        acc
+    });
+
+    if processed_results.is_empty() {
+        Err(ExchangeRateError::NotFound)
+    } else {
+        Ok(processed_results.into_values().collect::<Vec<_>>())
+    }
 }
 
 fn build_ok_response(rate_data: Vec<RatesDbRow>) -> serde_json::Value {
     serde_json::json!({
         "status": 200,
         "data": rate_data.iter().map(|row| {
-            HashMap::from([
-                ("asset_code", row.floatcode.clone()),
-                ("asset_issuer" , row.fltissuer.clone()),
-                ("base_currency", "USD".into()),
-                ("date_time", row.timestamp_iso8601()),
-                ("exchange_rate", row.rate.to_string()),
-            ])
+            serde_json::json!({
+                "asset_code": row.floatcode,
+                "asset_issuer": row.fltissuer,
+                "base_currency": "USD",
+                "date_time": row.timestamp_iso8601(),
+                "exchange_rate": row.rate.to_string(),
+            })
         }).collect::<Vec<_>>(),
     })
 }
 
-fn build_not_found_response(request: ExchangeRateRequest) -> serde_json::Value {
-    let error = match request.date {
-        Some(date) => format!("No exchange rate found for date {}.", date),
-        None => "No exchange rate found.".to_string(),
+fn build_error_response(error: ExchangeRateError) -> serde_json::Value {
+    let (status, message) = match error {
+        ExchangeRateError::InvalidDate => (
+            400,
+            "Invalid date format. Please use the format '2020-09-16T14:30:00'.",
+        ),
+        ExchangeRateError::NotFound => (404, "No exchange rate found."),
+        ExchangeRateError::DatabaseError => (500, "An error occurred while querying the database."),
     };
 
     serde_json::json!({
-        "status": 404,
+        "status": status,
         "data": {
-            "asset": request.asset_code,
-            "error": error,
+            "error": message,
         },
     })
 }
