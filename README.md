@@ -2,7 +2,7 @@
 
 ## Functioning and purpose ##
 
-This API is used to get the exchange rate between any asset in the Stellar network and the USD. It is based on swaps between USDC and the asset in question. Exchange rates are calculated on 6-hour windows. Any rates the API returns are represented on the basis of 1 USD – meaning, a value of 28 for an asset means $1 buys 28 units of that asset. The value of 1 USDC is assumed to be exactly $1 at all times.
+This API is used to get the exchange rate between USD and any asset in the Stellar network, based on swaps with USDC. This stablecoin is assumed to always be worth exactly $1. Exchange rates are calculated on 6-hour windows; the rates the API returns are represented on the basis of 1 USD – meaning, a value of 28 for an asset means $1 buys 28 units of that asset.
 
 ## Usage ##
 
@@ -17,30 +17,61 @@ curl -s -X POST https://mainnet.mercurydata.app/zephyr/execute \
      -d "$QUERY"
 ```
 
-In the query, the variable `$arguments` has to be present. Due to parsing needs at the host server, it has to be double-escaped, like `"{\\\"asset\\\": \\\"XLM\\\", \\\"date\\\": \\\"2024-10-07T15:15:00\\\"}"`
+In the query, the variable `$arguments` has to be present. Due to parsing needs at the host server, it has to be double-escaped, like `"{\\\"asset_code\\\": \\\"XLM\\\", \\\"date\\\": \\\"2024-10-07T15:15:00\\\"}"`
 
-In the example above, replace `XLM` with the asset whose exchange rate is desired; this argument is mandatory. The `date` argument is optional; if it is not provided, the latest available rate for the asset is returned. When making use of this option, the format `2019-10-14T10:45:00` must be followed; a space between the day and hour is invalid, with `T` being required.
+### Arguments ###
+
+`asset_code`
+
+**Mandatory**. Case-sensitive. Rates for this asset code will be returned.
+
+`asset_issuer`
+
+Optional. A 56-character string, starting with `G`, followed by numbers and uppercase letters. There is usually only one "canonical" issuer for a given asset, but there are valid exceptions (e.g EURC). If this argument is provided, then only rates for the given combination of asset code and issuer will be searched. Otherwise, all available issuers are returned, in decreasing order of USDC trade volume in the 6-hour window.
+
+`date`
+
+Optional. Must meet the format `2019-10-14T10:45:00`; notice that a space between the day and hour is invalid, with `T` being required. The exchange rates returned are the most recent prior to the given date; if this argument is not provided, the current time is used.
 
 ### Response ###
 
-In line with host server usage, the status code in the raw response received is always 200. The actual response from the API can follow one of the following three formats:
+In line with host server usage, the status code in the raw response received is always 200. The actual response from the API can follow one of the following formats:
 
 ```JSONc
 // Success
 {
-  "data": {
-    "asset": "yXLM",
-    "base_currency": "USD",
-    "date_time": "2024-10-08T14:53:24.000000000Z",
-    "exchange_rate": "11.02165865188488"
-  },
+  "data": [
+    {
+      "asset_code": "EURC",
+      "asset_issuer": "GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2",
+      "base_currency": "USD",
+      "date_time": "2024-10-15T12:39:20.000000000Z",
+      "exchange_rate": "0.9072931269624842",
+      "volume": "32632.862163199996"
+    },
+    {
+      "asset_code": "EURC",
+      "asset_issuer": "GAQRF3UGHBT6JYQZ7YSUYCIYWAF4T2SAA5237Q5LIQYJOHHFAWDXZ7NM",
+      "base_currency": "USD",
+      "date_time": "2024-10-15T12:39:20.000000000Z",
+      "exchange_rate": "1.0652092556689798",
+      "volume": "11404.5021919"
+    },
+    {
+      "asset_code": "EURC",
+      "asset_issuer": "GAP2JFYUBSSY65FIFUN3NTUKP6MQQ52QETQEBDM25PFMQE2EEN2EEURC",
+      "base_currency": "USD",
+      "date_time": "2024-10-15T12:19:17.000000000Z",
+      "exchange_rate": "0.9201194727031821",
+      "volume": "0.0044529"
+    }
+  ],
   "status": 200
 }
 
 // Exchange rate not found
 {
   "data": {
-    "asset": "ZWD",
     "error": "No exchange rate found."
   },
   "status": 404
@@ -52,6 +83,14 @@ In line with host server usage, the status code in the raw response received is 
     "error": "Invalid date format. Please use the format '2020-09-16T14:30:00'."
   },
   "status": 400
+}
+
+// Internal server error
+{
+  "data": {
+    "error": "An error occurred while querying the database."
+  },
+  "status": 500
 }
 ```
 
