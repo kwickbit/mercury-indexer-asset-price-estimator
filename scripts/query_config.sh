@@ -22,10 +22,8 @@ Options:
   --help, -h              Display this help message
 
 Examples:
-  query all
   query asset XLM
   query asset USDC GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN
   query asset BTC 2018-01-01T14:30:00
-  query --raw all
   query --raw asset ETH GBDEVU63Y6NTHJQQZIKVTC23NWLQVP3WJ2RI2OTSJTNYOIGICST6DUXR 2020-16-09T16:09:00
   query --help"

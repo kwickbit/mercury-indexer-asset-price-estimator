@@ -55,6 +55,10 @@ parse_arguments() {
                     shift
                 fi
                 ;;
+            currencies)
+                command="currencies"
+                shift
+                ;;
             savepoint)
                 command="savepoint"
                 shift
