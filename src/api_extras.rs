@@ -29,6 +29,23 @@ pub extern "C" fn savepoint() {
 }
 
 #[no_mangle]
+pub extern "C" fn get_all_currencies() {
+    let client = EnvClient::empty();
+    let exchange_rates = client.read::<RatesDbRow>();
+
+    let mut currencies: Vec<String> = exchange_rates
+        .iter()
+        .map(|row| row.floatcode.clone())
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
+
+    currencies.sort();
+
+    client.conclude(serde_json::json!(currencies));
+}
+
+#[no_mangle]
 pub extern "C" fn get_all_exchange_rates() {
     let client = EnvClient::empty();
     let exchange_rates = client.read::<RatesDbRow>();
