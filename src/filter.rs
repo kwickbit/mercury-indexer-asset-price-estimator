@@ -8,7 +8,10 @@ use zephyr_sdk::soroban_sdk::xdr::{
 
 use crate::config::USDC;
 use crate::db::swap::Swap;
-use crate::utils::{extract_claim_atoms_from_path_payment_result, extract_transaction_results};
+use crate::constants::SCAM_ADDRESSES;
+use crate::utils::{
+    extract_claim_atoms_from_path_payment_result, extract_transaction_results, format_asset_code,
+};
 
 /*
 We fish every swap from each ledger close. There is a lot of Vec flattening because:
@@ -61,7 +64,11 @@ fn swap_from_offer(offer_result: &ManageOfferSuccessResult) -> Vec<Swap> {
     match &offer_result.offer {
         ManageOfferSuccessResultOffer::Created(offer_entry)
         | ManageOfferSuccessResultOffer::Updated(offer_entry)
-            if offer_entry.selling == USDC || offer_entry.buying == USDC =>
+            if (offer_entry.selling == USDC
+                && !SCAM_ADDRESSES.contains(&format_asset_code(&offer_entry.buying).as_str()))
+                || (offer_entry.buying == USDC
+                    && !SCAM_ADDRESSES
+                        .contains(&format_asset_code(&offer_entry.selling).as_str())) =>
         {
             vec![Swap::from(offer_entry.clone())]
         }
