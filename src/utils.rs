@@ -1,6 +1,11 @@
 use zephyr_sdk::soroban_sdk::xdr::{
-    AlphaNum12, AlphaNum4, Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, OperationResult, OperationResultTr, PathPaymentStrictReceiveResult, PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendResult, PathPaymentStrictSendResultSuccess, TransactionResultMeta, TransactionResultResult
+    AlphaNum12, AlphaNum4, Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0,
+    OperationResult, OperationResultTr, PathPaymentStrictReceiveResult,
+    PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendResult,
+    PathPaymentStrictSendResultSuccess, TransactionResultMeta, TransactionResultResult,
 };
+
+use crate::constants::SCAM_ADDRESSES;
 
 pub fn extract_transaction_results(result_meta: &TransactionResultMeta) -> Vec<OperationResultTr> {
     match &result_meta.result.result.result {
@@ -81,6 +86,18 @@ fn bytes_to_string(bytes: &[u8]) -> &str {
 pub fn format_asset_issuer(asset: &Asset) -> String {
     match asset {
         Asset::Native => "Native".to_string(),
-        Asset::CreditAlphanum4(AlphaNum4 { issuer, .. }) | Asset::CreditAlphanum12(AlphaNum12 { issuer, .. }) => issuer.to_string(),
+        Asset::CreditAlphanum4(AlphaNum4 { issuer, .. })
+        | Asset::CreditAlphanum12(AlphaNum12 { issuer, .. }) => issuer.to_string(),
     }
+}
+
+pub fn is_counterasset_valid(counterasset: &Asset) -> bool {
+    let is_scam_address = !SCAM_ADDRESSES.contains(&format_asset_code(counterasset).as_str());
+
+    let is_fake_xlm = match counterasset {
+        Asset::Native => false,
+        _ => format_asset_code(counterasset) == "XLM",
+    };
+
+    !is_scam_address && !is_fake_xlm
 }

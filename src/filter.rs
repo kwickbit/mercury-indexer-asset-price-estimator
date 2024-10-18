@@ -8,9 +8,9 @@ use zephyr_sdk::soroban_sdk::xdr::{
 
 use crate::config::USDC;
 use crate::db::swap::Swap;
-use crate::constants::SCAM_ADDRESSES;
 use crate::utils::{
-    extract_claim_atoms_from_path_payment_result, extract_transaction_results, format_asset_code,
+    extract_claim_atoms_from_path_payment_result, extract_transaction_results,
+    is_counterasset_valid,
 };
 
 /*
@@ -64,11 +64,8 @@ fn swap_from_offer(offer_result: &ManageOfferSuccessResult) -> Vec<Swap> {
     match &offer_result.offer {
         ManageOfferSuccessResultOffer::Created(offer_entry)
         | ManageOfferSuccessResultOffer::Updated(offer_entry)
-            if (offer_entry.selling == USDC
-                && !SCAM_ADDRESSES.contains(&format_asset_code(&offer_entry.buying).as_str()))
-                || (offer_entry.buying == USDC
-                    && !SCAM_ADDRESSES
-                        .contains(&format_asset_code(&offer_entry.selling).as_str())) =>
+            if (offer_entry.selling == USDC && is_counterasset_valid(&offer_entry.buying))
+                || (offer_entry.buying == USDC && is_counterasset_valid(&offer_entry.selling)) =>
         {
             vec![Swap::from(offer_entry.clone())]
         }

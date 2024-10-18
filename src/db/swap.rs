@@ -8,7 +8,9 @@ use zephyr_sdk::{
 
 use crate::{
     config::{CONVERSION_FACTOR, USDC},
-    utils::{extract_claim_atom_data, format_asset_code, format_asset_issuer},
+    utils::{
+        extract_claim_atom_data, format_asset_code, format_asset_issuer, is_counterasset_valid,
+    },
 };
 
 #[derive(DatabaseDerive, Clone)]
@@ -111,7 +113,7 @@ impl TryFrom<&ClaimAtom> for Swap {
         let (asset_sold, amount_sold, asset_bought, amount_bought) =
             extract_claim_atom_data(claim_atom);
 
-        if *asset_sold == USDC {
+        if *asset_sold == USDC && is_counterasset_valid(asset_bought) {
             Ok(Swap {
                 created_at: None,
                 usdc_amount: amount_sold as f64,
@@ -121,7 +123,7 @@ impl TryFrom<&ClaimAtom> for Swap {
                 price_numerator: amount_bought,
                 price_denominator: amount_sold,
             })
-        } else if *asset_bought == USDC {
+        } else if *asset_bought == USDC && is_counterasset_valid(asset_sold) {
             Ok(Swap {
                 created_at: None,
                 usdc_amount: amount_bought as f64,
@@ -132,7 +134,7 @@ impl TryFrom<&ClaimAtom> for Swap {
                 price_denominator: amount_bought,
             })
         } else {
-            Err("No USDC was swapped.".into())
+            Err("Cannot create swap: no USDC involved, or invalid counterasset.".into())
         }
     }
 }
