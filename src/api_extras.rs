@@ -55,8 +55,11 @@ pub extern "C" fn get_all_exchange_rates() {
         .fold(
             HashMap::new(),
             |mut acc: HashMap<(&str, &str), Vec<RatesDbRow>>, row| {
+                // Look for the combo of asset code and issuer
                 acc.entry((&row.floatcode, &row.fltissuer))
+                    // If it's not there, create an empty Vec
                     .or_default()
+                    // Append the new rate to the old ones (possibly empty)
                     .push(row.clone());
                 acc
             },
@@ -69,7 +72,8 @@ pub extern "C" fn get_all_exchange_rates() {
                 "rates": rates.into_iter().map(|row| {
                     serde_json::json!({
                         "date": row.timestamp_iso8601(),
-                        "rate": row.rate.to_string()
+                        "rate": row.rate.to_string(),
+                        "volume": row.volume.to_string(),
                     })
                 }).collect::<Vec<_>>()
             })
