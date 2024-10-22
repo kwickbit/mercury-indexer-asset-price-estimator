@@ -61,29 +61,11 @@ pub fn calculate_exchange_rates(client: &EnvClient, savepoint: u64) -> ExchangeR
 }
 
 fn read_swaps(client: &EnvClient, savepoint: u64) -> Vec<SwapDbRow> {
-    let the_cooler_client = EnvClient::empty();
-
-    let metasyntactical_variable = client
+    client
         .read_filter()
         .column_gt("creation", savepoint)
         .read::<SwapDbRow>()
-        .map_err(|error| {
-            the_cooler_client.log().error(
-                &format!("Error while reading swaps from the database: {error}"),
-                None,
-            );
-            error
-        })
-        .unwrap();
-
-    the_cooler_client.log().debug(
-        &format!(
-            "Read {} swaps from the database.",
-            metasyntactical_variable.len()
-        ),
-        None,
-    );
-    metasyntactical_variable
+        .unwrap()
 }
 
 fn calculate_rates(swaps: Vec<SwapDbRow>) -> ExchangeRateMap {
