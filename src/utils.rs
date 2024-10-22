@@ -91,12 +91,12 @@ pub fn format_asset_issuer(asset: &Asset) -> String {
     }
 }
 
-pub fn is_counterasset_valid(counterasset: &Asset) -> bool {
-    let is_scam_address = SCAM_ADDRESSES.contains(&format_asset_code(counterasset).as_str());
+pub fn is_floating_asset_valid(asset: &Asset) -> bool {
+    let is_scam_address = SCAM_ADDRESSES.contains(&format_asset_code(asset).as_str());
 
-    let is_fake_xlm = match counterasset {
+    let is_fake_xlm = match asset {
         Asset::Native => false,
-        _ => format_asset_code(counterasset) == "XLM",
+        _ => format_asset_code(asset) == "XLM",
     };
 
     !is_scam_address && !is_fake_xlm

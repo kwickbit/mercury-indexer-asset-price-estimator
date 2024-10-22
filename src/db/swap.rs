@@ -9,7 +9,7 @@ use zephyr_sdk::{
 use crate::{
     config::{CONVERSION_FACTOR, USDC},
     utils::{
-        extract_claim_atom_data, format_asset_code, format_asset_issuer, is_counterasset_valid,
+        extract_claim_atom_data, format_asset_code, format_asset_issuer, is_floating_asset_valid,
     },
 };
 
@@ -82,24 +82,27 @@ impl Display for Swap {
 impl From<OfferEntry> for Swap {
     fn from(offer_entry: OfferEntry) -> Self {
         if offer_entry.selling == USDC {
+            let floating_asset = offer_entry.buying;
             Swap {
                 created_at: None,
                 usdc_amount: offer_entry.amount as f64,
                 is_usdc_sale: true,
-                floating_asset_code: format_asset_code(&offer_entry.buying),
-                floating_asset_issuer: format_asset_issuer(&offer_entry.buying),
+                floating_asset_code: format_asset_code(&floating_asset),
+                floating_asset_issuer: format_asset_issuer(&floating_asset),
                 price_numerator: offer_entry.price.n as i64,
                 price_denominator: offer_entry.price.d as i64,
             }
         } else {
-            let amount =
+            let floating_asset = offer_entry.selling;
+            let usdc_amount =
                 offer_entry.amount as f64 * offer_entry.price.n as f64 / offer_entry.price.d as f64;
+
             Swap {
                 created_at: None,
-                usdc_amount: amount,
+                usdc_amount,
                 is_usdc_sale: false,
-                floating_asset_code: format_asset_code(&offer_entry.selling),
-                floating_asset_issuer: format_asset_issuer(&offer_entry.selling),
+                floating_asset_code: format_asset_code(&floating_asset),
+                floating_asset_issuer: format_asset_issuer(&floating_asset),
                 price_numerator: offer_entry.price.d as i64,
                 price_denominator: offer_entry.price.n as i64,
             }
@@ -113,7 +116,7 @@ impl TryFrom<&ClaimAtom> for Swap {
         let (asset_sold, amount_sold, asset_bought, amount_bought) =
             extract_claim_atom_data(claim_atom);
 
-        if *asset_sold == USDC && is_counterasset_valid(asset_bought) {
+        if *asset_sold == USDC && is_floating_asset_valid(asset_bought) {
             Ok(Swap {
                 created_at: None,
                 usdc_amount: amount_sold as f64,
@@ -123,7 +126,7 @@ impl TryFrom<&ClaimAtom> for Swap {
                 price_numerator: amount_bought,
                 price_denominator: amount_sold,
             })
-        } else if *asset_bought == USDC && is_counterasset_valid(asset_sold) {
+        } else if *asset_bought == USDC && is_floating_asset_valid(asset_sold) {
             Ok(Swap {
                 created_at: None,
                 usdc_amount: amount_bought as f64,
