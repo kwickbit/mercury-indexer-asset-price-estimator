@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use zephyr_sdk::EnvClient;
 
-use crate::db::{exchange_rate::RatesDbRow, savepoint::Savepoint};
+use crate::{
+    constants::soroswap_tokens::SOROSWAP_TOKENS,
+    db::{exchange_rate::RatesDbRow, savepoint::Savepoint},
+};
 
 #[derive(Deserialize, Serialize)]
 pub struct CatRequest {
@@ -69,6 +72,7 @@ pub extern "C" fn get_all_exchange_rates() {
             serde_json::json!({
                 "asset_code": asset_code,
                 "asset_issuer": asset_issuer,
+                "soroswap_certified_asset": SOROSWAP_TOKENS.contains(&(asset_code, asset_issuer)),
                 "rates": rates.into_iter().map(|row| {
                     serde_json::json!({
                         "date": row.timestamp_iso8601(),
