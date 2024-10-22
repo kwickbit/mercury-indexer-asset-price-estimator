@@ -5,7 +5,7 @@ use zephyr_sdk::soroban_sdk::xdr::{
     PathPaymentStrictSendResultSuccess, TransactionResultMeta, TransactionResultResult,
 };
 
-use crate::constants::SCAM_ADDRESSES;
+use crate::constants::scam_addresses::SCAM_ADDRESSES;
 
 pub fn extract_transaction_results(result_meta: &TransactionResultMeta) -> Vec<OperationResultTr> {
     match &result_meta.result.result.result {

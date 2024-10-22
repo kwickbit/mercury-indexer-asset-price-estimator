@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 use time::format_description::well_known::Iso8601;
 use zephyr_sdk::EnvClient;
 
-use crate::db::{exchange_rate::RatesDbRow, savepoint::Savepoint};
+use crate::{
+    constants::soroswap_tokens::SOROSWAP_TOKENS,
+    db::{exchange_rate::RatesDbRow, savepoint::Savepoint},
+};
 
 #[derive(Deserialize, Serialize)]
 pub struct ExchangeRateRequest {
@@ -132,6 +135,7 @@ fn build_ok_response(mut rate_data: Vec<RatesDbRow>) -> serde_json::Value {
                 "base_currency": "USD",
                 "date_time": row.timestamp_iso8601(),
                 "exchange_rate": row.rate.to_string(),
+                "soroswap_certified_asset": SOROSWAP_TOKENS.contains(&(&row.floatcode, &row.fltissuer)),
                 "volume": row.volume.to_string(),
             })
         }).collect::<Vec<_>>(),
