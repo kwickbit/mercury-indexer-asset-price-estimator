@@ -10,7 +10,7 @@ use crate::config::USDC;
 use crate::db::swap::Swap;
 use crate::utils::{
     extract_claim_atoms_from_path_payment_result, extract_transaction_results,
-    is_counterasset_valid,
+    is_floating_asset_valid,
 };
 
 /*
@@ -64,8 +64,9 @@ fn swap_from_offer(offer_result: &ManageOfferSuccessResult) -> Vec<Swap> {
     match &offer_result.offer {
         ManageOfferSuccessResultOffer::Created(offer_entry)
         | ManageOfferSuccessResultOffer::Updated(offer_entry)
-            if (offer_entry.selling == USDC && is_counterasset_valid(&offer_entry.buying))
-                || (offer_entry.buying == USDC && is_counterasset_valid(&offer_entry.selling)) =>
+            if (offer_entry.selling == USDC && is_floating_asset_valid(&offer_entry.buying))
+                || (offer_entry.buying == USDC
+                    && is_floating_asset_valid(&offer_entry.selling)) =>
         {
             vec![Swap::from(offer_entry.clone())]
         }
