@@ -92,7 +92,7 @@ pub fn format_asset_issuer(asset: &Asset) -> String {
 }
 
 pub fn is_counterasset_valid(counterasset: &Asset) -> bool {
-    let is_scam_address = !SCAM_ADDRESSES.contains(&format_asset_code(counterasset).as_str());
+    let is_scam_address = SCAM_ADDRESSES.contains(&format_asset_code(counterasset).as_str());
 
     let is_fake_xlm = match counterasset {
         Asset::Native => false,
