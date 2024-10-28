@@ -1,12 +1,12 @@
 #!/bin/bash
 
 parse_arguments() {
-    local raw_output=false
-    local command=""
-    local asset_code=""
-    local asset_issuer=""
-    local date=""
-    local cat_text=""
+    local raw_output=false      # Whether to output raw JSON (instead of jq)
+    local command=""            # The command to execute: asset, all, cat, savepoint, currencies
+    local asset_code=""         # With the `asset` command: asset code to query
+    local asset_issuer=""       # (Optional) With the `asset` command: asset issuer to query
+    local date=""               # (Optional) With the `asset` command: date to query
+    local cat_text=""           # With the `cat` command: text to display
 
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -18,10 +18,12 @@ parse_arguments() {
                 echo "$HELP_MESSAGE"
                 return 1
                 ;;
+            # read all exchange rates
             all)
                 command="all"
                 shift
                 ;;
+            # the main method, to read exchange rates for a specific asset
             asset)
                 command="asset"
                 shift
@@ -47,6 +49,7 @@ parse_arguments() {
                     return 1
                 fi
                 ;;
+            # cat to check the API is live and can process args
             cat)
                 command="cat"
                 shift
@@ -55,10 +58,12 @@ parse_arguments() {
                     shift
                 fi
                 ;;
+            # helper to read all currencies we have exchange rates for
             currencies)
                 command="currencies"
                 shift
                 ;;
+            # savepoint to check the API can call the DB
             savepoint)
                 command="savepoint"
                 shift

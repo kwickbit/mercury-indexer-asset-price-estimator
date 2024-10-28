@@ -6,34 +6,14 @@ source "$(dirname "$0")/query_config.sh"
 result=$(parse_arguments "$@")
 exit_code=$?
 
+# The arguments might be invalid or the user might have called --help
 if [ $exit_code -ne 0 ]; then
     exit $exit_code
 fi
 
+# Send the parsed arguments to build_query
 IFS='@' read -r raw_output command asset_code asset_issuer date cat_text <<< "$result"
-
-if [ "$command" = "all" ]; then
-    fname="get_all_exchange_rates"
-    arguments="{}"
-elif [ "$command" = "asset" ]; then
-    fname="get_exchange_rate"
-    arguments="{\\\"asset_code\\\": \\\"$asset_code\\\""
-    [ -n "$asset_issuer" ] && arguments="$arguments, \\\"asset_issuer\\\": \\\"$asset_issuer\\\""
-    [ -n "$date" ] && arguments="$arguments, \\\"date\\\": \\\"$date\\\""
-    arguments="$arguments}"
-elif [ "$command" = "cat" ]; then
-    fname="cat"
-    arguments="{\\\"text\\\": \\\"$cat_text\\\"}"
-elif [ "$command" = "currencies" ]; then
-    fname="get_all_currencies"
-    arguments="{}"
-elif [ "$command" = "savepoint" ]; then
-    fname="savepoint"
-    arguments="{}"
-fi
-
-# Set the QUERY variable using a template
-QUERY="{\"project_name\": \"kwickbit\", \"mode\": {\"Function\": {\"fname\": \"$fname\", \"arguments\": \"$arguments\"}}}"
+QUERY=$(build_query "$command" "$asset_code" "$asset_issuer" "$date" "$cat_text")
 
 # Call the API, suppressing progress output from `curl`
 curl -s -X POST https://mainnet.mercurydata.app/zephyr/execute \
