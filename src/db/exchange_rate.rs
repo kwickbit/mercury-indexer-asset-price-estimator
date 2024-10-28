@@ -65,6 +65,9 @@ fn read_swaps(client: &EnvClient, savepoint: u64) -> Vec<SwapDbRow> {
         .read_filter()
         .column_gt("creation", savepoint)
         .read::<SwapDbRow>()
+        // This could panic; it is crucial to us that it doesn't. One reason
+        // it would is if there is too much data. To address that, we adjust
+        // the interval between savepoints to something the DB can handle.
         .unwrap()
 }
 
