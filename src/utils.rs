@@ -5,7 +5,7 @@ use zephyr_sdk::soroban_sdk::xdr::{
     PathPaymentStrictSendResultSuccess, TransactionResultMeta, TransactionResultResult,
 };
 
-use crate::constants::scam_addresses::SCAM_ADDRESSES;
+use crate::constants::{scam_addresses::SCAM_ADDRESSES, soroswap_tokens::SOROSWAP_TOKENS};
 
 pub fn extract_transaction_results(result_meta: &TransactionResultMeta) -> Vec<OperationResultTr> {
     match &result_meta.result.result.result {
@@ -100,4 +100,8 @@ pub fn is_floating_asset_valid(asset: &Asset) -> bool {
     };
 
     !is_scam_address && !is_fake_xlm
+}
+
+pub fn is_certified_asset(floatcode: &str, fltissuer: &str) -> bool {
+    fltissuer == "Native" || SOROSWAP_TOKENS.contains(&(floatcode, fltissuer))
 }

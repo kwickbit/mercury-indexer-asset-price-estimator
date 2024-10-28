@@ -4,8 +4,7 @@ use serde::{Deserialize, Serialize};
 use zephyr_sdk::EnvClient;
 
 use crate::{
-    constants::soroswap_tokens::SOROSWAP_TOKENS,
-    db::{exchange_rate::RatesDbRow, savepoint::Savepoint},
+    db::{exchange_rate::RatesDbRow, savepoint::Savepoint}, utils::is_certified_asset,
 };
 
 #[derive(Deserialize, Serialize)]
@@ -72,7 +71,7 @@ pub extern "C" fn get_all_exchange_rates() {
             serde_json::json!({
                 "asset_code": asset_code,
                 "asset_issuer": asset_issuer,
-                "soroswap_certified_asset": SOROSWAP_TOKENS.contains(&(asset_code, asset_issuer)),
+                "soroswap_certified_asset": is_certified_asset(asset_code, asset_issuer),
                 "rates": rates.into_iter().map(|row| {
                     serde_json::json!({
                         "date": row.timestamp_iso8601(),
