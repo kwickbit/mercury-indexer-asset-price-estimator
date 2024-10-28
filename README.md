@@ -6,10 +6,12 @@ This API is used to get the exchange rate between USD and any asset in the Stell
 
 ## Usage ##
 
+### Shell ###
+
 The API requires authentication via JWT. The general format for querying is as follows:
 
 ```bash
-QUERY="{\"project_name\": \"indexer\", \"mode\": {\"Function\": {\"fname\": \"get_exchange_rate\", \"arguments\": \"$arguments\"}}}"
+QUERY="{\"project_name\": \"kwickbit\", \"mode\": {\"Function\": {\"fname\": \"get_exchange_rate\", \"arguments\": \"$arguments\"}}}"
 
 curl -s -X POST https://mainnet.mercurydata.app/zephyr/execute \
      -H "Authorization: Bearer $JWT" \
@@ -18,6 +20,40 @@ curl -s -X POST https://mainnet.mercurydata.app/zephyr/execute \
 ```
 
 In the query, the variable `$arguments` has to be present. Due to parsing needs at the host server, it has to be double-escaped, like `"{\\\"asset_code\\\": \\\"XLM\\\", \\\"date\\\": \\\"2024-10-07T15:15:00\\\"}"`
+
+### JavaScript ###
+
+Here is sample JS code for querying the API. You must provide your Mercury JWT and the arguments explained below.
+```js
+const JWT = "your Mercury JWT here";  // Or read it from your .env file
+
+const apiArgs = {
+  asset_code: "EURC",
+  // asset_issuer: "your_issuer_here",
+  // date: "2024-10-07T15:15:00"
+};
+
+(async function queryAPI(args) {
+  const response = await fetch("https://mainnet.mercurydata.app/zephyr/execute", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${JWT}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      project_name: "kwickbit",
+      mode: {
+        Function: {
+          fname: "get_exchange_rate",
+          arguments: JSON.stringify(apiArgs),
+        },
+      },
+    }),
+  });
+
+  console.log(await response.json());
+})();
+```
 
 ### Arguments ###
 
