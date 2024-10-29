@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# By default, deployments don't change the DB schema. When they do, all data is
-# dropped. The script takes a --force argument that forces everything, but we
-# can be more granular via the zephyr.toml file.
+# Force mode can be triggered either by an argument to the script,
+# which applies to all tables, or by a setting in a specific table
+# in the zephyr.toml file. Here we check for the latter.
 check_force_in_toml() {
     local toml_file="zephyr.toml"
     if [ -f "$toml_file" ]; then

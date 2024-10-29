@@ -63,7 +63,7 @@ const apiArgs = {
 
 `asset_issuer`
 
-Optional. A 56-character string, starting with `G`, followed by numbers and uppercase letters. There is usually only one "canonical" issuer for a given asset, but there are valid exceptions (e.g EURC). If this argument is provided, then only rates for the given combination of asset code and issuer will be searched. Otherwise, all available issuers are returned, in decreasing order of USDC trade volume in the 6-hour window.
+Optional. A 56-character string, starting with `G`, followed by numbers and uppercase letters. There is usually only one "canonical" issuer for a given asset, but there are valid exceptions (e.g. EURC). If this argument is provided, then only rates for the given combination of asset code and issuer will be searched. Otherwise, all available issuers are returned, in decreasing order of USDC trade volume in the 6-hour window.
 
 `date`
 

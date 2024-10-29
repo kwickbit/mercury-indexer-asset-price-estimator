@@ -148,6 +148,8 @@ fn build_error_response(error: ExchangeRateError) -> serde_json::Value {
     let (status, message) = match error {
         ExchangeRateError::InvalidDate => (
             400,
+            // TODO: make the format a bit more flexible; at least allow for
+            //       the use of a space between the day and hour
             "Invalid date format. Please use the format '2020-09-16T14:30:00'.",
         ),
         ExchangeRateError::NotFound => (404, "No exchange rate found."),
