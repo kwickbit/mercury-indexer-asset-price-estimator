@@ -1,3 +1,6 @@
+pub mod scam_addresses;
+pub mod soroswap_tokens;
+
 use zephyr_sdk::soroban_sdk::xdr::{AccountId, AlphaNum4, Asset, AssetCode4, PublicKey, Uint256};
 
 // We focus on USDC, the most-used stablecoin on the Stellar network.

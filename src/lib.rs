@@ -1,7 +1,6 @@
 mod api;
 mod api_extras;
 mod config;
-mod constants;
 mod db;
 mod filter;
 mod utils;
