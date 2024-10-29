@@ -25,7 +25,7 @@ If its result is of an Offer type, it can have one swap, if one of the assets
 involved is USDC.
 Path payments can have more than one swap so we always build Vecs of swaps.
 */
-pub fn swaps(transaction_results: Vec<TransactionResultMeta>) -> Vec<Swap> {
+pub(crate) fn swaps(transaction_results: Vec<TransactionResultMeta>) -> Vec<Swap> {
     transaction_results
         .iter()
         .filter(is_transaction_successful)

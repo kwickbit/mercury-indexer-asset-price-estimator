@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[derive(Deserialize, Serialize)]
-pub struct CatRequest {
+pub(crate) struct CatRequest {
     text: String,
 }
 

@@ -1,6 +1,6 @@
-pub mod exchange_rate;
-pub mod savepoint;
-pub mod swap;
+pub(crate) mod exchange_rate;
+pub(crate) mod savepoint;
+pub(crate) mod swap;
 
 use zephyr_sdk::{DatabaseInteract, EnvClient};
 
@@ -10,7 +10,7 @@ use swap::{Swap, SwapDbRow};
 
 use crate::config::RATE_UPDATE_INTERVAL;
 
-pub fn save_swaps(client: &EnvClient, swaps: &[Swap]) {
+pub(crate) fn save_swaps(client: &EnvClient, swaps: &[Swap]) {
     let timestamp = client.reader().ledger_timestamp();
 
     swaps
@@ -18,7 +18,7 @@ pub fn save_swaps(client: &EnvClient, swaps: &[Swap]) {
         .for_each(|swap| SwapDbRow::new(swap, timestamp).put(client));
 }
 
-pub fn save_rates(client: &EnvClient) {
+pub(crate) fn save_rates(client: &EnvClient) {
     let savepoints = client.read::<Savepoint>();
 
     // We only create a savepoint if none is found, and update

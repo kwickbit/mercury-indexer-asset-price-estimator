@@ -7,7 +7,9 @@ use zephyr_sdk::soroban_sdk::xdr::{
 
 use crate::config::{scam_addresses::SCAM_ADDRESSES, soroswap_tokens::SOROSWAP_TOKENS};
 
-pub fn extract_transaction_results(result_meta: &TransactionResultMeta) -> Vec<OperationResultTr> {
+pub(crate) fn extract_transaction_results(
+    result_meta: &TransactionResultMeta,
+) -> Vec<OperationResultTr> {
     match &result_meta.result.result.result {
         TransactionResultResult::TxSuccess(op_results) => op_results
             .iter()
@@ -20,9 +22,7 @@ pub fn extract_transaction_results(result_meta: &TransactionResultMeta) -> Vec<O
     }
 }
 
-pub fn extract_claim_atoms_from_path_payment_result(
-    path_payment_result: &OperationResultTr,
-) -> Vec<ClaimAtom> {
+pub(crate) fn get_claims_from_operation(path_payment_result: &OperationResultTr) -> Vec<ClaimAtom> {
     match path_payment_result {
         OperationResultTr::PathPaymentStrictReceive(PathPaymentStrictReceiveResult::Success(
             PathPaymentStrictReceiveResultSuccess { offers, .. },
@@ -34,7 +34,7 @@ pub fn extract_claim_atoms_from_path_payment_result(
     }
 }
 
-pub fn extract_claim_atom_data(claim_atom: &ClaimAtom) -> (&Asset, i64, &Asset, i64) {
+pub(crate) fn extract_claim_atom_data(claim_atom: &ClaimAtom) -> (&Asset, i64, &Asset, i64) {
     match claim_atom {
         ClaimAtom::V0(ClaimOfferAtomV0 {
             asset_sold,
@@ -60,7 +60,30 @@ pub fn extract_claim_atom_data(claim_atom: &ClaimAtom) -> (&Asset, i64, &Asset, 
     }
 }
 
-pub fn format_asset_code(asset: &Asset) -> String {
+pub(crate) fn format_asset_issuer(asset: &Asset) -> String {
+    match asset {
+        Asset::Native => "Native".to_string(),
+        Asset::CreditAlphanum4(AlphaNum4 { issuer, .. })
+        | Asset::CreditAlphanum12(AlphaNum12 { issuer, .. }) => issuer.to_string(),
+    }
+}
+
+pub(crate) fn is_floating_asset_valid(asset: &Asset) -> bool {
+    let is_scam_address = SCAM_ADDRESSES.contains(&format_asset_code(asset).as_str());
+
+    let is_fake_xlm = match asset {
+        Asset::Native => false,
+        _ => format_asset_code(asset) == "XLM",
+    };
+
+    !is_scam_address && !is_fake_xlm
+}
+
+pub(crate) fn is_certified_asset(floatcode: &str, fltissuer: &str) -> bool {
+    fltissuer == "Native" || SOROSWAP_TOKENS.contains(&(floatcode, fltissuer))
+}
+
+pub(crate) fn format_asset_code(asset: &Asset) -> String {
     match asset {
         Asset::Native => "XLM".to_string(),
         Asset::CreditAlphanum4(AlphaNum4 { asset_code, .. }) => {
@@ -81,27 +104,4 @@ fn format_nonnative_asset(asset_code: &[u8]) -> String {
 
 fn bytes_to_string(bytes: &[u8]) -> &str {
     std::str::from_utf8(bytes).unwrap_or("Unreadable")
-}
-
-pub fn format_asset_issuer(asset: &Asset) -> String {
-    match asset {
-        Asset::Native => "Native".to_string(),
-        Asset::CreditAlphanum4(AlphaNum4 { issuer, .. })
-        | Asset::CreditAlphanum12(AlphaNum12 { issuer, .. }) => issuer.to_string(),
-    }
-}
-
-pub fn is_floating_asset_valid(asset: &Asset) -> bool {
-    let is_scam_address = SCAM_ADDRESSES.contains(&format_asset_code(asset).as_str());
-
-    let is_fake_xlm = match asset {
-        Asset::Native => false,
-        _ => format_asset_code(asset) == "XLM",
-    };
-
-    !is_scam_address && !is_fake_xlm
-}
-
-pub fn is_certified_asset(floatcode: &str, fltissuer: &str) -> bool {
-    fltissuer == "Native" || SOROSWAP_TOKENS.contains(&(floatcode, fltissuer))
 }

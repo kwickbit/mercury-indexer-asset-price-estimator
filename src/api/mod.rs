@@ -1,3 +1,5 @@
+pub(crate) mod extras;
+
 use std::{cmp::Ordering::Equal, collections::HashMap};
 
 use serde::{Deserialize, Serialize};
@@ -10,7 +12,7 @@ use crate::{
 };
 
 #[derive(Deserialize, Serialize)]
-pub struct ExchangeRateRequest {
+pub(crate) struct ExchangeRateRequest {
     asset_code: String,
     asset_issuer: Option<String>,
     date: Option<String>,

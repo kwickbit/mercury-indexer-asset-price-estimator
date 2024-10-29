@@ -13,7 +13,7 @@ pub type ExchangeRateMap = HashMap<String, (ExchangeRate, UsdVolume)>;
 
 #[derive(Clone, DatabaseDerive)]
 #[with_name("rates")]
-pub struct RatesDbRow {
+pub(crate) struct RatesDbRow {
     pub timestamp: u64,
     pub floatcode: String,
     pub fltissuer: String,
@@ -22,7 +22,7 @@ pub struct RatesDbRow {
 }
 
 impl RatesDbRow {
-    pub fn timestamp_iso8601(&self) -> String {
+    pub(crate) fn timestamp_iso8601(&self) -> String {
         OffsetDateTime::from_unix_timestamp(self.timestamp as i64)
             .unwrap()
             .format(&Iso8601::DEFAULT)
@@ -44,7 +44,7 @@ impl From<(&String, &(f64, f64))> for RatesDbRow {
     }
 }
 
-pub fn calculate_exchange_rates(client: &EnvClient, savepoint: u64) -> ExchangeRateMap {
+pub(crate) fn calculate_exchange_rates(client: &EnvClient, savepoint: u64) -> ExchangeRateMap {
     // We query the DB only for the swaps that happened after the savepoint
     let swaps = read_swaps(client, savepoint);
 

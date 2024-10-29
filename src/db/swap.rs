@@ -15,7 +15,7 @@ use crate::{
 
 #[derive(DatabaseDerive, Clone)]
 #[with_name("swaps")]
-pub struct SwapDbRow {
+pub(crate) struct SwapDbRow {
     pub creation: u64,
     pub usdc_amnt: i64,
     // This stands in for a bool: 1 means the swap was a USDC sale, 0 = purchase.
@@ -27,7 +27,7 @@ pub struct SwapDbRow {
 }
 
 impl SwapDbRow {
-    pub fn new(swap: &Swap, timestamp: u64) -> Self {
+    pub(crate) fn new(swap: &Swap, timestamp: u64) -> Self {
         Self {
             creation: timestamp,
             usdc_amnt: swap.usdc_amount as i64,
@@ -41,7 +41,7 @@ impl SwapDbRow {
 }
 
 #[derive(Clone, Debug)]
-pub struct Swap {
+pub(crate) struct Swap {
     pub created_at: Option<u64>,
     pub usdc_amount: f64,
     pub is_usdc_sale: bool,
