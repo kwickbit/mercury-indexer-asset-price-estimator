@@ -1,6 +1,6 @@
-pub(crate) mod exchange_rate;
-pub(crate) mod savepoint;
-pub(crate) mod swap;
+pub mod exchange_rate;
+pub mod savepoint;
+pub mod swap;
 
 use zephyr_sdk::{DatabaseInteract, EnvClient};
 

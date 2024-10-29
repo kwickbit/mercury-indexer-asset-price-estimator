@@ -5,7 +5,8 @@ use time::format_description::well_known::Iso8601;
 use zephyr_sdk::EnvClient;
 
 use crate::{
-    db::{exchange_rate::RatesDbRow, savepoint::Savepoint}, utils::is_certified_asset,
+    db::{exchange_rate::RatesDbRow, savepoint::Savepoint},
+    utils::is_certified_asset,
 };
 
 #[derive(Deserialize, Serialize)]
