@@ -4,76 +4,71 @@ name = "kwickbit"
 [[tables]]
 name = "savepoint"
 
-[[tables.columns]]
-name = "savepoint"
-# u64, timestamp taken from the ledger close time
-col_type = "BIGINT"
+    [[tables.columns]]
+    name = "savepoint"
+    # u64, timestamp taken from the ledger close time
+    col_type = "BIGINT"
 
 # This table holds all the swaps involving our stablecoins of interest
 [[tables]]
 name = "swaps"
 
-[[tables.columns]]
-name = "creation"
-# u64, timestamp taken from the ledger close time
-col_type = "BIGINT"
+    [[tables.columns]]
+    name = "creation"
+    # u64, timestamp taken from the ledger close time
+    col_type = "BIGINT"
 
-[[tables.columns]]
-name = "usdc_amnt"
-# i64, amount of USDC in stroops (10^-7 stroops per unit)
-col_type = "BIGINT"
+    [[tables.columns]]
+    name = "usdc_amnt"
+    # i64, amount of USDC in stroops (10^-7 stroops per unit)
+    col_type = "BIGINT"
 
-[[tables.columns]]
-name = "usdc_sale"
-# boolean, 0 (false) if USDC was bought
-col_type = "BIGINT"
+    [[tables.columns]]
+    name = "floatcode"
+    # String, code of the floating coin
+    col_type = "BYTEA"
 
-[[tables.columns]]
-name = "floatcode"
-# String, code of the floating coin
-col_type = "BYTEA"
+    [[tables.columns]]
+    name = "fltissuer"
+    # String, address of the floating coin issuer
+    col_type = "BYTEA"
 
-[[tables.columns]]
-name = "fltissuer"
-# String, address of the floating coin issuer
-col_type = "BYTEA"
+    # The price is # of units of floating coin per unit of stablecoin
+    [[tables.columns]]
+    name = "numerator"
+    # i32, the numerator of the price
+    col_type = "BIGINT"
 
-# The price is # of units of floating coin per unit of stablecoin
-[[tables.columns]]
-name = "numerator"
-# i32, the numerator of the price
-col_type = "BIGINT"
-
-[[tables.columns]]
-name = "denom"
-# i32, the denominator of the price
-col_type = "BIGINT"
+    [[tables.columns]]
+    name = "denom"
+    # i32, the denominator of the price
+    col_type = "BIGINT"
 
 # This table holds the exchange rates for floatcoins
 [[tables]]
 name = "rates"
 
-[[tables.columns]]
-name = "timestamp"
-# u64, timestamp of the end of the averaging window
-col_type = "BIGINT"
+    [[tables.columns]]
+    name = "timestamp"
+    # u64, timestamp of the end of the averaging window
+    col_type = "BIGINT"
 
-[[tables.columns]]
-name = "floatcode"
-# String, code of the floating coin
-col_type = "BYTEA"
+    [[tables.columns]]
+    name = "floatcode"
+    # String, code of the floating coin
+    col_type = "BYTEA"
 
-[[tables.columns]]
-name = "fltissuer"
-# String, address of the floating coin issuer
-col_type = "BYTEA"
+    [[tables.columns]]
+    name = "fltissuer"
+    # String, address of the floating coin issuer
+    col_type = "BYTEA"
 
-[[tables.columns]]
-name = "rate"
-# f64, the exchange rate
-col_type = "BYTEA"
+    [[tables.columns]]
+    name = "rate"
+    # f64, the exchange rate
+    col_type = "BYTEA"
 
-[[tables.columns]]
-name = "volume"
-# f64, the volume traded in $
-col_type = "BYTEA"
+    [[tables.columns]]
+    name = "volume"
+    # f64, the volume traded in $
+    col_type = "BYTEA"
