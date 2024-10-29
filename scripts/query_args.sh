@@ -63,6 +63,11 @@ parse_arguments() {
                 command="currencies"
                 shift
                 ;;
+            # helper to read all duplicate swaps
+            duplicates)
+                command="duplicates"
+                shift
+                ;;
             # savepoint to check the API can call the DB
             savepoint)
                 command="savepoint"

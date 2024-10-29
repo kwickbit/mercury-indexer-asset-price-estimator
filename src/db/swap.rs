@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-#[derive(DatabaseDerive, Clone)]
+#[derive(Clone, DatabaseDerive)]
 #[with_name("swaps")]
 pub(crate) struct SwapDbRow {
     pub creation: u64,

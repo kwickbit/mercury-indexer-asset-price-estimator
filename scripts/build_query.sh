@@ -27,6 +27,9 @@ build_query() {
     elif [ "$command" = "currencies" ]; then
         fname="get_all_currencies"
         arguments="{}"
+    elif [ "$command" = "duplicates" ]; then
+        fname="get_duplicate_swaps"
+        arguments="{}"
     elif [ "$command" = "savepoint" ]; then
         fname="savepoint"
         arguments="{}"

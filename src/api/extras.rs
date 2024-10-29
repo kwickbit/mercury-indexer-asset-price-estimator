@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use zephyr_sdk::EnvClient;
 
 use crate::{
-    db::{exchange_rate::RatesDbRow, savepoint::Savepoint},
+    config::CONVERSION_FACTOR,
+    db::{exchange_rate::RatesDbRow, savepoint::Savepoint, swap::SwapDbRow},
     utils::is_certified_asset,
 };
 
@@ -46,6 +47,59 @@ pub extern "C" fn get_all_currencies() {
     currencies.sort();
 
     client.conclude(serde_json::json!(currencies));
+}
+
+#[no_mangle]
+pub extern "C" fn get_duplicate_swaps() {
+    let client = EnvClient::empty();
+
+    // Get the latest savepoint
+    let savepoint = client.read::<Savepoint>().first().unwrap().savepoint;
+
+    // Read all exchange rates at the latest savepoint
+    let swaps = client
+        .read_filter()
+        .column_gt("creation", savepoint)
+        .read::<SwapDbRow>()
+        .unwrap();
+
+    // Create a map to store swaps with the same characteristics
+    use std::collections::HashMap;
+    let mut swap_groups: HashMap<(String, String, String, String), Vec<u64>> = HashMap::new();
+
+    // Group swaps by their characteristics and store creation times
+    for rate in &swaps {
+        let key = (
+            rate.floatcode.clone(),
+            rate.fltissuer.clone(),
+            (rate.usdc_amnt as f64 / CONVERSION_FACTOR).to_string(),
+            format!("{:.4}", rate.numerator as f64 / rate.denom as f64),
+        );
+        swap_groups.entry(key).or_default().push(rate.creation);
+    }
+
+    // Filter only duplicates (groups with more than 1 entry)
+    let duplicates: Vec<_> = swap_groups
+        .clone()
+        .into_iter()
+        .filter(|(_, creations)| creations.len() > 1)
+        .map(|((asset_code, asset_issuer, volume, price), creations)| {
+            serde_json::json!({
+                "asset_code": asset_code,
+                "asset_issuer": asset_issuer,
+                "volume": volume,
+                "price": price,
+                "creation_times": creations
+            })
+        })
+        .collect();
+
+    client.conclude(serde_json::json!({
+        "savepoint": savepoint,
+        "duplicates": duplicates,
+        "total_swaps": swaps.len(),
+        "unique_swaps": swap_groups.len() - duplicates.len(),
+    }));
 }
 
 #[no_mangle]
