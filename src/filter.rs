@@ -1,17 +1,9 @@
-use std::vec;
-
 use zephyr_sdk::soroban_sdk::xdr::{
-    ManageBuyOfferResult, ManageOfferSuccessResult, ManageOfferSuccessResultOffer,
-    ManageSellOfferResult, OperationResultTr, PathPaymentStrictReceiveResult,
-    PathPaymentStrictSendResult, TransactionResultMeta, TransactionResultResult,
+    OperationResultTr, TransactionResultMeta, TransactionResultResult,
 };
 
-use crate::config::USDC;
 use crate::db::swap::Swap;
-use crate::utils::{
-    extract_claim_atoms_from_path_payment_result, extract_transaction_results,
-    is_floating_asset_valid,
-};
+use crate::utils::{extract_transaction_results, get_claims_from_operation};
 
 /**
  * We 'fish' every swap from each ledger close. There is some Vec flattening because:
@@ -21,7 +13,7 @@ use crate::utils::{
  *
  * An operation can have no swaps if it is a create account, create contract, etc.
  * If its result is an Offer or PathPayment type, it can have multiple swaps.
-*/
+ */
 pub(crate) fn swaps(transaction_results: Vec<TransactionResultMeta>) -> Vec<Swap> {
     transaction_results
         .iter()
@@ -43,41 +35,10 @@ fn swaps_from_transaction(transaction: &TransactionResultMeta) -> Vec<Swap> {
 }
 
 fn swaps_from_operation(operation: &OperationResultTr) -> Vec<Swap> {
-    match operation {
-        OperationResultTr::ManageSellOffer(ManageSellOfferResult::Success(offer_result))
-        | OperationResultTr::CreatePassiveSellOffer(ManageSellOfferResult::Success(offer_result))
-        | OperationResultTr::ManageBuyOffer(ManageBuyOfferResult::Success(offer_result)) => {
-            swap_from_offer(offer_result)
-        }
-        OperationResultTr::PathPaymentStrictReceive(PathPaymentStrictReceiveResult::Success(_))
-        | OperationResultTr::PathPaymentStrictSend(PathPaymentStrictSendResult::Success(_)) => {
-            swaps_from_path_payment(operation)
-        }
-        _ => Vec::new(),
-    }
-}
+    let claims = get_claims_from_operation(operation);
 
-fn swap_from_offer(offer_result: &ManageOfferSuccessResult) -> Vec<Swap> {
-    match &offer_result.offer {
-        ManageOfferSuccessResultOffer::Created(offer_entry)
-        | ManageOfferSuccessResultOffer::Updated(offer_entry)
-            if (offer_entry.selling == USDC && is_floating_asset_valid(&offer_entry.buying))
-                || (offer_entry.buying == USDC
-                    && is_floating_asset_valid(&offer_entry.selling)) =>
-        {
-            vec![Swap::from(offer_entry.clone())]
-        }
-        _ => Vec::new(),
-    }
-}
-
-fn swaps_from_path_payment(operation_result: &OperationResultTr) -> Vec<Swap> {
-    let claim_atoms = extract_claim_atoms_from_path_payment_result(operation_result);
-
-    claim_atoms
+    claims
         .iter()
-        // If try_from returns an error, that's because no USDC was involved;
-        // we don't want to include that swap.
-        .filter_map(|claim_atom| Swap::try_from(claim_atom).ok())
+        .filter_map(|claim| Swap::try_from(claim).ok())
         .collect()
 }

@@ -1,10 +1,6 @@
 use std::fmt::Display;
 
-use zephyr_sdk::{
-    prelude::*,
-    soroban_sdk::xdr::{ClaimAtom, OfferEntry},
-    DatabaseDerive, EnvClient,
-};
+use zephyr_sdk::{prelude::*, soroban_sdk::xdr::ClaimAtom, DatabaseDerive, EnvClient};
 
 use crate::{
     config::{CONVERSION_FACTOR, USDC},
@@ -18,8 +14,6 @@ use crate::{
 pub(crate) struct SwapDbRow {
     pub creation: u64,
     pub usdc_amnt: i64,
-    // This stands in for a bool: 1 means the swap was a USDC sale, 0 = purchase.
-    pub usdc_sale: i32,
     pub floatcode: String,
     pub fltissuer: String,
     pub numerator: i64,
@@ -31,7 +25,6 @@ impl SwapDbRow {
         Self {
             creation: timestamp,
             usdc_amnt: swap.usdc_amount as i64,
-            usdc_sale: swap.is_usdc_sale as i32,
             floatcode: swap.floating_asset_code.clone(),
             fltissuer: swap.floating_asset_issuer.clone(),
             numerator: swap.price_numerator,
@@ -44,7 +37,6 @@ impl SwapDbRow {
 pub(crate) struct Swap {
     pub created_at: Option<u64>,
     pub usdc_amount: f64,
-    pub is_usdc_sale: bool,
     pub floating_asset_code: String,
     pub floating_asset_issuer: String,
     pub price_numerator: i64,
@@ -53,8 +45,6 @@ pub(crate) struct Swap {
 
 impl Display for Swap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let direction = if self.is_usdc_sale { "(sell)" } else { "(buy)" };
-
         let timestamp = self
             .created_at
             .map(|ts| {
@@ -70,43 +60,12 @@ impl Display for Swap {
 
         write!(
             f,
-            "{timestamp} {direction} {} USDC for {} ({}) at {}",
+            "{timestamp}: {} USDC for {} ({}) at {}",
             self.usdc_amount / CONVERSION_FACTOR,
             self.floating_asset_code,
             self.floating_asset_issuer,
             self.price_numerator as f64 / self.price_denominator as f64
         )
-    }
-}
-
-impl From<OfferEntry> for Swap {
-    fn from(offer_entry: OfferEntry) -> Self {
-        if offer_entry.selling == USDC {
-            let floating_asset = offer_entry.buying;
-            Swap {
-                created_at: None,
-                usdc_amount: offer_entry.amount as f64,
-                is_usdc_sale: true,
-                floating_asset_code: format_asset_code(&floating_asset),
-                floating_asset_issuer: format_asset_issuer(&floating_asset),
-                price_numerator: offer_entry.price.n as i64,
-                price_denominator: offer_entry.price.d as i64,
-            }
-        } else {
-            let floating_asset = offer_entry.selling;
-            let usdc_amount =
-                offer_entry.amount as f64 * offer_entry.price.n as f64 / offer_entry.price.d as f64;
-
-            Swap {
-                created_at: None,
-                usdc_amount,
-                is_usdc_sale: false,
-                floating_asset_code: format_asset_code(&floating_asset),
-                floating_asset_issuer: format_asset_issuer(&floating_asset),
-                price_numerator: offer_entry.price.d as i64,
-                price_denominator: offer_entry.price.n as i64,
-            }
-        }
     }
 }
 
@@ -120,7 +79,6 @@ impl TryFrom<&ClaimAtom> for Swap {
             Ok(Swap {
                 created_at: None,
                 usdc_amount: amount_sold as f64,
-                is_usdc_sale: true,
                 floating_asset_code: format_asset_code(asset_bought),
                 floating_asset_issuer: format_asset_issuer(asset_bought),
                 price_numerator: amount_bought,
@@ -130,7 +88,6 @@ impl TryFrom<&ClaimAtom> for Swap {
             Ok(Swap {
                 created_at: None,
                 usdc_amount: amount_bought as f64,
-                is_usdc_sale: false,
                 floating_asset_code: format_asset_code(asset_sold),
                 floating_asset_issuer: format_asset_issuer(asset_sold),
                 price_numerator: amount_sold,
@@ -147,7 +104,6 @@ impl From<&SwapDbRow> for Swap {
         Swap {
             created_at: Some(row.creation),
             usdc_amount: row.usdc_amnt as f64,
-            is_usdc_sale: row.usdc_sale == 1,
             floating_asset_code: row.floatcode.to_string(),
             floating_asset_issuer: row.fltissuer.to_string(),
             price_numerator: row.numerator,

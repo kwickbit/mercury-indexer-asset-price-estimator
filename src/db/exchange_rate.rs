@@ -87,24 +87,24 @@ fn extract_amounts(
     mut counts: HashMap<String, (WeightedSum, UsdVolume)>,
     row: &SwapDbRow,
 ) -> HashMap<String, (WeightedSum, UsdVolume)> {
-    let volume: UsdVolume = row.usdc_amnt as f64 / CONVERSION_FACTOR;
-    let rate: f64 = row.numerator as f64 / row.denom as f64;
-    let key = format!("{}_{}", row.floatcode, row.fltissuer);
+    let usdc_swapped: UsdVolume = row.usdc_amnt as f64 / CONVERSION_FACTOR;
+    let swap_exchange_rate: f64 = row.numerator as f64 / row.denom as f64;
+    let floatcoin = format!("{}_{}", row.floatcode, row.fltissuer);
 
     // For XLM swaps, we sometimes get weird values, so we don't include them
-    if rate != 1e-7 {
+    if swap_exchange_rate != 1e-7 {
         // Update the entry with a running sum of (weighted_sum, total_volume)
         counts
-            .entry(key)
+            .entry(floatcoin)
             .and_modify(|(floatcoin_total, total_volume)| {
                 // This cannot overflow because the maximum value of f64, 1.8e308,
-                // is ridicuolsly larger than the maximum value of i64, 9.2e18.
+                // is ridiculously larger than the maximum value of i64, 9.2e18.
                 // The trade-off, though, is that for values larger than 2^53 we
                 // lose precision. This should not be a problem in practice.
-                *floatcoin_total += volume * rate;
-                *total_volume += volume;
+                *floatcoin_total += usdc_swapped * swap_exchange_rate;
+                *total_volume += usdc_swapped;
             })
-            .or_insert((volume * rate, volume));
+            .or_insert((usdc_swapped * swap_exchange_rate, usdc_swapped));
     }
 
     counts

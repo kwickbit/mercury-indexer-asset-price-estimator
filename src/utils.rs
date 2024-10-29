@@ -1,8 +1,9 @@
 use zephyr_sdk::soroban_sdk::xdr::{
     AlphaNum12, AlphaNum4, Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0,
-    OperationResult, OperationResultTr, PathPaymentStrictReceiveResult,
-    PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendResult,
-    PathPaymentStrictSendResultSuccess, TransactionResultMeta, TransactionResultResult,
+    ManageBuyOfferResult, ManageSellOfferResult, OperationResult, OperationResultTr,
+    PathPaymentStrictReceiveResult, PathPaymentStrictReceiveResultSuccess,
+    PathPaymentStrictSendResult, PathPaymentStrictSendResultSuccess, TransactionResultMeta,
+    TransactionResultResult,
 };
 
 use crate::config::{scam_addresses::SCAM_ADDRESSES, soroswap_tokens::SOROSWAP_TOKENS};
@@ -33,13 +34,19 @@ pub(crate) fn extract_transaction_results(
  */
 pub(crate) fn get_claims_from_operation(path_payment_result: &OperationResultTr) -> Vec<ClaimAtom> {
     match path_payment_result {
+        OperationResultTr::ManageSellOffer(ManageSellOfferResult::Success(result))
+        | OperationResultTr::CreatePassiveSellOffer(ManageSellOfferResult::Success(result))
+        | OperationResultTr::ManageBuyOffer(ManageBuyOfferResult::Success(result)) => {
+            result.offers_claimed.to_vec()
+        }
+
         OperationResultTr::PathPaymentStrictReceive(PathPaymentStrictReceiveResult::Success(
             PathPaymentStrictReceiveResultSuccess { offers, .. },
         ))
         | OperationResultTr::PathPaymentStrictSend(PathPaymentStrictSendResult::Success(
             PathPaymentStrictSendResultSuccess { offers, .. },
         )) => offers.to_vec(),
-        _ => unreachable!(),
+        _ => Vec::new(),
     }
 }
 
