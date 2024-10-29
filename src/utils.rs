@@ -7,6 +7,10 @@ use zephyr_sdk::soroban_sdk::xdr::{
 
 use crate::config::{scam_addresses::SCAM_ADDRESSES, soroswap_tokens::SOROSWAP_TOKENS};
 
+/**
+ *  Extracts the successful transaction results from a TransactionResultMeta.
+ *  This is tedious. Oh, and we discard any unsuccessful results.
+ */
 pub(crate) fn extract_transaction_results(
     result_meta: &TransactionResultMeta,
 ) -> Vec<OperationResultTr> {
@@ -22,6 +26,11 @@ pub(crate) fn extract_transaction_results(
     }
 }
 
+/**
+ * We build swaps from ClaimAtoms, which represent actual exchanges of assets.
+ * We can get these from Offer and PathPayment operations, in a subtly
+ * different way.
+ */
 pub(crate) fn get_claims_from_operation(path_payment_result: &OperationResultTr) -> Vec<ClaimAtom> {
     match path_payment_result {
         OperationResultTr::PathPaymentStrictReceive(PathPaymentStrictReceiveResult::Success(
@@ -34,6 +43,9 @@ pub(crate) fn get_claims_from_operation(path_payment_result: &OperationResultTr)
     }
 }
 
+/**
+ * We extract only the data we need from the various types of ClaimAtoms.
+ */
 pub(crate) fn extract_claim_atom_data(claim_atom: &ClaimAtom) -> (&Asset, i64, &Asset, i64) {
     match claim_atom {
         ClaimAtom::V0(ClaimOfferAtomV0 {
@@ -60,6 +72,9 @@ pub(crate) fn extract_claim_atom_data(claim_atom: &ClaimAtom) -> (&Asset, i64, &
     }
 }
 
+/**
+ * Extract the issuer of an Asset, e.g. "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN".
+ */
 pub(crate) fn format_asset_issuer(asset: &Asset) -> String {
     match asset {
         Asset::Native => "Native".to_string(),
@@ -68,6 +83,9 @@ pub(crate) fn format_asset_issuer(asset: &Asset) -> String {
     }
 }
 
+/**
+ * We discard assets involving known scam addresses and non-native "XLM" assets.
+ */
 pub(crate) fn is_floating_asset_valid(asset: &Asset) -> bool {
     let is_scam_address = SCAM_ADDRESSES.contains(&format_asset_code(asset).as_str());
 
@@ -79,10 +97,16 @@ pub(crate) fn is_floating_asset_valid(asset: &Asset) -> bool {
     !is_scam_address && !is_fake_xlm
 }
 
+/**
+ * We highlight Soroswap-certified assets, as well as native XLM.
+ */
 pub(crate) fn is_certified_asset(floatcode: &str, fltissuer: &str) -> bool {
     fltissuer == "Native" || SOROSWAP_TOKENS.contains(&(floatcode, fltissuer))
 }
 
+/**
+ * Turn an Asset object into its usual format, e.g. "XLM" or "USDC".
+ */
 pub(crate) fn format_asset_code(asset: &Asset) -> String {
     match asset {
         Asset::Native => "XLM".to_string(),

@@ -13,17 +13,14 @@ use crate::utils::{
     is_floating_asset_valid,
 };
 
-/*
-We fish every swap from each ledger close. There is a lot of Vec flattening because:
-- there are many transactions in each close;
-- there are many operations in each transaction;
-- if the operation is a path payment, it can have more than one swap (as in,
-  an asset is traded for USDC and that is traded for something else).
-
-An operation can have no swaps if it is a create account, create contract, etc.
-If its result is of an Offer type, it can have one swap, if one of the assets
-involved is USDC.
-Path payments can have more than one swap so we always build Vecs of swaps.
+/**
+ * We 'fish' every swap from each ledger close. There is some Vec flattening because:
+ * - there are many transactions in each close;
+ * - there are many operations in each transaction;
+ * - there can be many swaps in each operation.
+ *
+ * An operation can have no swaps if it is a create account, create contract, etc.
+ * If its result is an Offer or PathPayment type, it can have multiple swaps.
 */
 pub(crate) fn swaps(transaction_results: Vec<TransactionResultMeta>) -> Vec<Swap> {
     transaction_results

@@ -82,7 +82,7 @@ fn calculate_rates(swaps: Vec<SwapDbRow>) -> ExchangeRateMap {
         .collect::<ExchangeRateMap>()
 }
 
-// Comment
+// We calculate the total amounts of USDC and floatcoin swapped.
 fn extract_amounts(
     mut counts: HashMap<String, (WeightedSum, UsdVolume)>,
     row: &SwapDbRow,

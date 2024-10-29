@@ -7,6 +7,11 @@ mod utils;
 use zephyr_sdk::EnvClient;
 
 #[no_mangle]
+/**
+ * On every ledger close, we read the swaps from the latest sequence and save
+ * them. Once a configured time window has passed, we calculate exchange rates
+ * based on those swaps and save them.
+ */
 pub extern "C" fn on_close() {
     // The basics
     let client = EnvClient::new();
