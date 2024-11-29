@@ -269,6 +269,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "data-encoding"
+version = "2.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
+
+[[package]]
 name = "der"
 version = "0.7.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -617,12 +623,13 @@ dependencies = [
 
 [[package]]
 name = "kwickbit"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "hex",
  "itertools 0.13.0",
  "serde",
  "serde_json",
+ "stellar-strkey 0.0.11",
  "time",
  "zephyr-sdk",
 ]
@@ -1094,7 +1101,7 @@ dependencies = [
  "soroban-env-common",
  "soroban-wasmi",
  "static_assertions",
- "stellar-strkey",
+ "stellar-strkey 0.0.8",
  "wasmparser",
 ]
 
@@ -1141,7 +1148,7 @@ dependencies = [
  "soroban-env-host",
  "soroban-ledger-snapshot",
  "soroban-sdk-macros",
- "stellar-strkey",
+ "stellar-strkey 0.0.8",
 ]
 
 [[package]]
@@ -1239,6 +1246,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "stellar-strkey"
+version = "0.0.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0989c9a05eccbd08b60e603a1c7e3ed3ec92c0de73b8681fc964d272ab2b2697"
+dependencies = [
+ "crate-git-revision",
+ "data-encoding",
+]
+
+[[package]]
 name = "stellar-xdr"
 version = "20.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1250,7 +1267,7 @@ dependencies = [
  "hex",
  "serde",
  "serde_with",
- "stellar-strkey",
+ "stellar-strkey 0.0.8",
 ]
 
 [[package]]
@@ -1265,7 +1282,7 @@ dependencies = [
  "hex",
  "serde",
  "serde_with",
- "stellar-strkey",
+ "stellar-strkey 0.0.8",
 ]
 
 [[package]]
@@ -1595,7 +1612,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "soroban-sdk",
- "stellar-strkey",
+ "stellar-strkey 0.0.8",
  "stellar-xdr 20.1.0",
  "thiserror",
  "wee_alloc",

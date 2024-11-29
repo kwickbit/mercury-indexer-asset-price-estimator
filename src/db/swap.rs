@@ -1,11 +1,15 @@
 use std::fmt::Display;
 
-use zephyr_sdk::{prelude::*, soroban_sdk::xdr::ClaimAtom, DatabaseDerive, EnvClient};
+use zephyr_sdk::{
+    prelude::*,
+    soroban_sdk::xdr::Asset,
+    DatabaseDerive, EnvClient,
+};
 
 use crate::{
     config::{CONVERSION_FACTOR, USDC},
     utils::{
-        extract_claim_atom_data, format_asset_code, format_asset_issuer, is_floating_asset_valid,
+        format_asset_code, format_asset_issuer, is_floating_asset_valid,
     },
 };
 
@@ -31,6 +35,13 @@ impl SwapDbRow {
             denom: swap.price_denominator,
         }
     }
+}
+
+pub(crate) struct SwapData<'a> {
+    pub asset_sold: &'a Asset,
+    pub amount_sold: i64,
+    pub asset_bought: &'a Asset,
+    pub amount_bought: i64,
 }
 
 #[derive(Clone, Debug)]
@@ -69,29 +80,26 @@ impl Display for Swap {
     }
 }
 
-impl TryFrom<&ClaimAtom> for Swap {
+impl TryFrom<&SwapData<'_>> for Swap {
     type Error = String;
-    fn try_from(claim_atom: &ClaimAtom) -> Result<Self, String> {
-        let (asset_sold, amount_sold, asset_bought, amount_bought) =
-            extract_claim_atom_data(claim_atom);
-
-        if *asset_sold == USDC && is_floating_asset_valid(asset_bought) {
+    fn try_from(swap_data: &SwapData) -> Result<Self, String> {
+        if *swap_data.asset_sold == USDC && is_floating_asset_valid(swap_data.asset_bought) {
             Ok(Swap {
                 created_at: None,
-                usdc_amount: amount_sold as f64,
-                floating_asset_code: format_asset_code(asset_bought),
-                floating_asset_issuer: format_asset_issuer(asset_bought),
-                price_numerator: amount_bought,
-                price_denominator: amount_sold,
+                usdc_amount: swap_data.amount_sold as f64,
+                floating_asset_code: format_asset_code(swap_data.asset_bought),
+                floating_asset_issuer: format_asset_issuer(swap_data.asset_bought),
+                price_numerator: swap_data.amount_bought,
+                price_denominator: swap_data.amount_sold,
             })
-        } else if *asset_bought == USDC && is_floating_asset_valid(asset_sold) {
+        } else if *swap_data.asset_bought == USDC && is_floating_asset_valid(swap_data.asset_sold) {
             Ok(Swap {
                 created_at: None,
-                usdc_amount: amount_bought as f64,
-                floating_asset_code: format_asset_code(asset_sold),
-                floating_asset_issuer: format_asset_issuer(asset_sold),
-                price_numerator: amount_sold,
-                price_denominator: amount_bought,
+                usdc_amount: swap_data.amount_bought as f64,
+                floating_asset_code: format_asset_code(swap_data.asset_sold),
+                floating_asset_issuer: format_asset_issuer(swap_data.asset_sold),
+                price_numerator: swap_data.amount_sold,
+                price_denominator: swap_data.amount_bought,
             })
         } else {
             Err("Cannot create swap: no USDC involved, or invalid counterasset.".into())

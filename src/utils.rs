@@ -1,12 +1,14 @@
+use stellar_strkey::{Contract, Strkey};
+
 use zephyr_sdk::soroban_sdk::xdr::{
     AlphaNum12, AlphaNum4, Asset, ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0,
-    ManageBuyOfferResult, ManageSellOfferResult, OperationResult, OperationResultTr,
+    Hash, ManageBuyOfferResult, ManageSellOfferResult, OperationResult, OperationResultTr,
     PathPaymentStrictReceiveResult, PathPaymentStrictReceiveResultSuccess,
     PathPaymentStrictSendResult, PathPaymentStrictSendResultSuccess, TransactionResultMeta,
     TransactionResultResult,
 };
 
-use crate::config::{scam_addresses::SCAM_ADDRESSES, soroswap_tokens::SOROSWAP_TOKENS};
+use crate::{config::{scam_addresses::SCAM_ADDRESSES, soroswap_tokens::SOROSWAP_TOKENS}, db::swap::SwapData};
 
 /**
  *  Extracts the successful transaction results from a TransactionResultMeta.
@@ -53,7 +55,7 @@ pub(crate) fn get_claims_from_operation(path_payment_result: &OperationResultTr)
 /**
  * We extract only the data we need from the various types of ClaimAtoms.
  */
-pub(crate) fn extract_claim_atom_data(claim_atom: &ClaimAtom) -> (&Asset, i64, &Asset, i64) {
+pub(crate) fn extract_claim_atom_data(claim_atom: &ClaimAtom) -> SwapData {
     match claim_atom {
         ClaimAtom::V0(ClaimOfferAtomV0 {
             asset_sold,
@@ -75,7 +77,12 @@ pub(crate) fn extract_claim_atom_data(claim_atom: &ClaimAtom) -> (&Asset, i64, &
             asset_bought,
             amount_bought,
             ..
-        }) => (asset_sold, *amount_sold, asset_bought, *amount_bought),
+        }) => SwapData {
+            asset_sold,
+            amount_sold: *amount_sold,
+            asset_bought,
+            amount_bought: *amount_bought,
+        },
     }
 }
 
@@ -135,4 +142,16 @@ fn format_nonnative_asset(asset_code: &[u8]) -> String {
 
 fn bytes_to_string(bytes: &[u8]) -> &str {
     std::str::from_utf8(bytes).unwrap_or("Unreadable")
+}
+
+
+/**
+ * Convert a Hash to a StrKey
+ */
+pub(crate) fn hash_to_strkey(hash: &Hash) -> String {
+    // Convert Hash to Contract
+    let contract = Contract(hash.0);
+
+    // Convert to StrKey string
+    Strkey::Contract(contract).to_string()
 }
