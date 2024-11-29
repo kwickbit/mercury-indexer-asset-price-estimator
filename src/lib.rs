@@ -4,6 +4,7 @@ mod db;
 mod filter;
 mod utils;
 
+use db::swap::Swap;
 use zephyr_sdk::EnvClient;
 
 #[no_mangle]
@@ -19,7 +20,15 @@ pub extern "C" fn on_close() {
     // Read and save the swaps from the latest sequence
     let results = client.reader().tx_processing();
     let swaps = filter::swaps(results);
-    db::save_swaps(&client, &swaps);
+    let soroban_events = client.reader().soroban_events();
+    let soroban_swaps = filter::soroswap_swaps(soroban_events);
+    db::save_swaps(
+        &client,
+        &swaps
+            .into_iter()
+            .chain(soroban_swaps)
+            .collect::<Vec<Swap>>(),
+    );
 
     // If it is time, calculate and save the exchange rates from the latest sequence
     db::save_rates(&client);
