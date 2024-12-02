@@ -76,7 +76,7 @@ fn first_savepoint(client: &EnvClient, current_timestamp: u64) {
     savepoint.put(client);
     client
         .log()
-        .debug(&format!("First savepoint: {current_timestamp}"), None);
+        .debug(format!("First savepoint: {current_timestamp}"), None);
 }
 
 fn update_savepoint(client: &EnvClient, current_timestamp: u64, latest_savepoint: u64) {
@@ -90,7 +90,7 @@ fn update_savepoint(client: &EnvClient, current_timestamp: u64, latest_savepoint
         .execute(&savepoint)
     {
         client.log().debug(
-            &format!(
+            format!(
                 "Sequence {} failed to update savepoint: {sdk_error}",
                 client.reader().ledger_sequence()
             ),
