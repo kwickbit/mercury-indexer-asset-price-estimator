@@ -49,7 +49,7 @@ pub(crate) fn calculate_exchange_rates(client: &EnvClient, savepoint: u64) -> Ex
     let swaps = read_swaps(client, savepoint);
 
     client.log().debug(
-        &format!(
+        format!(
             "Loaded {} swaps from the database ({} kb)",
             swaps.len(),
             (swaps.len() * std::mem::size_of::<SwapDbRow>()) / 1024
