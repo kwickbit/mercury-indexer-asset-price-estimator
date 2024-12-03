@@ -1,16 +1,17 @@
 pub(crate) mod scam_addresses;
 pub(crate) mod soroswap_tokens;
 
-use zephyr_sdk::soroban_sdk::xdr::{AccountId, AlphaNum4, Asset, AssetCode4, PublicKey, Uint256};
+use crate::db::swap::SwapAsset;
 
 // We focus on USDC, the most-used stablecoin on the Stellar network.
-pub const USDC: Asset = Asset::CreditAlphanum4(AlphaNum4 {
-    asset_code: AssetCode4(*b"USDC"),
-    issuer: AccountId(PublicKey::PublicKeyTypeEd25519(Uint256([
-        59, 153, 17, 56, 14, 254, 152, 139, 160, 168, 144, 14, 177, 207, 228, 79, 54, 111, 125,
-        190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
-    ]))),
-});
+pub const USDC: SwapAsset = SwapAsset {
+    code: "USDC",
+    issuer: "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+    contract: "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75",
+};
+
+// We need to know the SoroswapRouter contract address to filter Soroswap swaps
+pub const SOROSWAP_ROUTER: &str = "CAG5LRYQ5JVEUI5TEID72EYOVX44TTUJT5BQR2J6J77FH65PCCFAJDDH";
 
 // Amounts are represented multiplied by this factor
 pub const CONVERSION_FACTOR: f64 = 10_000_000.0;

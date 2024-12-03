@@ -72,3 +72,13 @@ name = "rates"
     name = "volume"
     # f64, the volume traded in $
     col_type = "BYTEA"
+
+# This table is meant to be temporary; it stores all Soroswap swaps
+# we detect. They won't all be saved in the swaps table.
+[[tables]]
+name = "soroswaps"
+
+    [[tables.columns]]
+    name = "swap"
+    # String, Soroswap swap data
+    col_type = "BYTEA"

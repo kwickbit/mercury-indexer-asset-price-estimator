@@ -4,9 +4,11 @@ use zephyr_sdk::soroban_sdk::xdr::{
 };
 use zephyr_sdk::EnvClient;
 
+use crate::config::SOROSWAP_ROUTER;
 use crate::db::swap::{Swap, SwapData};
 use crate::utils::{
-    extract_claim_atom_data, extract_transaction_results, get_claims_from_operation, hash_to_strkey,
+    extract_claim_atom_data, extract_transaction_results, get_address_from_scval,
+    get_claims_from_operation, get_swap_asset, hash_to_strkey, scmap_get,
 };
 
 /**
@@ -30,37 +32,36 @@ pub(crate) fn swaps(transaction_results: Vec<TransactionResultMeta>) -> Vec<Swap
 
 /**
  * We 'fish' every Soroswap swap from each ledger close. This function focuses
- * only on Soroswap swaps; lassic swaps are handled separately.
+ * only on Soroswap swaps; classic swaps are handled separately.
  */
 pub(crate) fn soroswap_swaps(soroban_events: Vec<ContractEvent>) -> Vec<Swap> {
-    let client = EnvClient::empty();
-
-    let address = "CAG5LRYQ5JVEUI5TEID72EYOVX44TTUJT5BQR2J6J77FH65PCCFAJDDH";
-
-    let filtered_events: Vec<ScVal> = soroban_events
+    soroban_events
         .into_iter()
-        .filter(|event| event.contract_id.is_some())
-        .filter_map(|event| {
-            let strkey = hash_to_strkey(event.contract_id.as_ref().unwrap());
-            let ContractEventBody::V0(event_body) = event.body.clone();
-            let is_swap =
-                matches!(event_body.topics.first().unwrap(), ScVal::Symbol(s) if s.to_string() == "swap");
+        .filter_map(soroswap_event)
+        .flat_map(swaps_from_event)
+        .collect()
+}
 
-            if strkey == address && is_swap {
-                Some(event_body.data)
-            } else {
-                None
-            }
-        })
-        .collect();
+fn soroswap_event(event: ContractEvent) -> Option<ScVal> {
+    let event_contract = event.contract_id.as_ref().map(hash_to_strkey)?;
+    let ContractEventBody::V0(body) = event.body;
 
-    if !filtered_events.is_empty() {
-        client
-            .log()
-            .debug(format!("First event: {:?}", filtered_events[0]), None);
+    let is_swap = body
+        .topics
+        .iter()
+        .any(|topic| matches!(topic, ScVal::Symbol(s) if s.to_string() == "swap"));
+
+    if event_contract == SOROSWAP_ROUTER && is_swap {
+        EnvClient::empty().log().debug(
+            format!(
+                "SoroswapRouter swap happened: {:?}",
+                body.data
+            ),
+            None,
+        );
     }
 
-    filtered_events.iter().flat_map(swaps_from_event).collect()
+    (event_contract == SOROSWAP_ROUTER && is_swap).then_some(body.data)
 }
 
 fn is_transaction_successful(transaction: &&TransactionResultMeta) -> bool {
@@ -84,45 +85,19 @@ fn swaps_from_operation(operation: &OperationResultTr) -> Vec<Swap> {
         .collect()
 }
 
-fn swaps_from_event(event: &ScVal) -> Vec<Swap> {
-    let client = EnvClient::empty();
+fn swaps_from_event(event: ScVal) -> Vec<Swap> {
+    let ScVal::Map(Some(map)) = event else {
+        return vec![];
+    };
 
-    match event {
-        ScVal::Map(Some(map)) => {
-            let path = map
-                .0
-                .iter()
-                .find(|entry| matches!(&entry.key, ScVal::Symbol(s) if s.to_string() == "path"))
-                .and_then(|entry| match &entry.val {
-                    ScVal::Vec(Some(v)) => Some(v),
-                    _ => None,
-                });
+    let path = scmap_get(&map, "path".to_string());
+    let amounts = scmap_get(&map, "amounts".to_string());
 
-            let amounts = map
-                .0
-                .iter()
-                .find(|entry| matches!(&entry.key, ScVal::Symbol(s) if s.to_string() == "amounts"))
-                .and_then(|entry| match &entry.val {
-                    ScVal::Vec(Some(v)) => Some(v),
-                    _ => None,
-                });
-
-            match (path, amounts) {
-                (Some(path), Some(amounts)) => {
-                    // Continue with processing
-                    swaps_from_path_and_amounts(path, amounts)
-                }
-                _ => {
-                    client.log().debug("Path or amounts not found", None);
-                    vec![]
-                }
-            }
-        }
-        _ => {
-            client.log().debug("Event is not a map", None);
-            vec![]
-        }
+    if path.is_none() || amounts.is_none() {
+        return vec![];
     }
+
+    swaps_from_path_and_amounts(path.unwrap(), amounts.unwrap())
 }
 
 fn swaps_from_path_and_amounts(assets_in_path: &ScVec, amounts_in_path: &ScVec) -> Vec<Swap> {
@@ -130,29 +105,43 @@ fn swaps_from_path_and_amounts(assets_in_path: &ScVec, amounts_in_path: &ScVec) 
         .0
         .windows(2)
         .zip(amounts_in_path.0.windows(2))
-        .filter_map(|(assets, amounts)| {
-            // These would be converted to Asset (like in extract_claim_atom_data)
-            let amount_sold = match &amounts[0] {
-                ScVal::I128(n) => ((n.hi as i128) << 64) + n.lo as i128,
-                _ => return None,
-            };
-            let amount_bought = match &amounts[1] {
-                ScVal::I128(n) => ((n.hi as i128) << 64) + n.lo as i128,
-                _ => return None,
-            };
-
-            // Convert ScVal addresses to Assets
-            let asset_sold = todo!(); // TODO: Convert ScVal address to Asset
-            let asset_bought = todo!(); // TODO: Convert ScVal address to Asset
-
-            let swap_data = SwapData {
-                asset_sold,
-                amount_sold: amount_sold.try_into().unwrap(),
-                asset_bought,
-                amount_bought: amount_bought.try_into().unwrap(),
-            };
-
-            Swap::try_from(&swap_data).ok()
-        })
+        .filter_map(swap_from_amounts_and_assets)
         .collect()
+}
+
+use zephyr_sdk::{prelude::*, DatabaseDerive};
+
+#[derive(Clone, DatabaseDerive)]
+#[with_name("soroswap")]
+struct Soroswap {
+    pub swap: String,
+}
+
+fn swap_from_amounts_and_assets((amounts, assets): (&[ScVal], &[ScVal])) -> Option<Swap> {
+    let (ScVal::I128(n1), ScVal::I128(n2)) = (&amounts[0], &amounts[1]) else {
+        return None;
+    };
+
+    let amount_sold = (((n1.hi as i128) << 64) + n1.lo as i128).try_into().ok()?;
+    let amount_bought = (((n2.hi as i128) << 64) + n2.lo as i128).try_into().ok()?;
+    let asset_sold = get_swap_asset(get_address_from_scval(&assets[0])?)?;
+    let asset_bought = get_swap_asset(get_address_from_scval(&assets[1])?)?;
+
+    let swap_data = SwapData {
+        amount_bought,
+        amount_sold,
+        asset_bought: Some(*asset_bought),
+        asset_sold: Some(*asset_sold),
+    };
+
+    let soroswap = Soroswap {
+        swap: format!(
+            "Swap data: {} {} for {} {}",
+            amount_sold, asset_sold.code, amount_bought, asset_bought.code
+        ),
+    };
+
+    soroswap.put(&EnvClient::new());
+
+    Swap::try_from(&swap_data).ok()
 }

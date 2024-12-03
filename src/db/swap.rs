@@ -2,15 +2,13 @@ use std::fmt::Display;
 
 use zephyr_sdk::{
     prelude::*,
-    soroban_sdk::xdr::Asset,
+    soroban_sdk::xdr::{AlphaNum12, AlphaNum4, Asset},
     DatabaseDerive, EnvClient,
 };
 
 use crate::{
     config::{CONVERSION_FACTOR, USDC},
-    utils::{
-        format_asset_code, format_asset_issuer, is_floating_asset_valid,
-    },
+    utils::build_nonnative_swap_asset,
 };
 
 #[derive(Clone, DatabaseDerive)]
@@ -37,11 +35,39 @@ impl SwapDbRow {
     }
 }
 
-pub(crate) struct SwapData<'a> {
-    pub asset_sold: &'a Asset,
-    pub amount_sold: i64,
-    pub asset_bought: &'a Asset,
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SwapAsset {
+    pub code: &'static str,
+    pub issuer: &'static str,
+    pub contract: &'static str,
+}
+
+impl TryFrom<&Asset> for SwapAsset {
+    type Error = String;
+
+    fn try_from(asset: &Asset) -> Result<Self, Self::Error> {
+        match asset {
+            Asset::Native => Ok(SwapAsset {
+                code: "XLM",
+                issuer: "Native",
+                contract: "Native",
+            }),
+            Asset::CreditAlphanum4(AlphaNum4 { asset_code, issuer }) => {
+                build_nonnative_swap_asset(asset_code.as_slice(), issuer.to_string()).copied()
+            }
+            Asset::CreditAlphanum12(AlphaNum12 { asset_code, issuer }) => {
+                build_nonnative_swap_asset(asset_code.as_slice(), issuer.to_string()).copied()
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct SwapData {
     pub amount_bought: i64,
+    pub amount_sold: i64,
+    pub asset_bought: Option<SwapAsset>,
+    pub asset_sold: Option<SwapAsset>,
 }
 
 #[derive(Clone, Debug)]
@@ -80,29 +106,37 @@ impl Display for Swap {
     }
 }
 
-impl TryFrom<&SwapData<'_>> for Swap {
+impl TryFrom<&SwapData> for Swap {
     type Error = String;
-    fn try_from(swap_data: &SwapData) -> Result<Self, String> {
-        if *swap_data.asset_sold == USDC && is_floating_asset_valid(swap_data.asset_bought) {
+
+    fn try_from(swap_data: &SwapData) -> Result<Self, Self::Error> {
+        if swap_data.asset_sold.is_none() || swap_data.asset_bought.is_none() {
+            return Err("Invalid asset in swap".to_string());
+        }
+
+        let asset_sold = swap_data.asset_sold.as_ref().unwrap();
+        let asset_bought = swap_data.asset_bought.as_ref().unwrap();
+
+        if *asset_sold == USDC {
             Ok(Swap {
                 created_at: None,
                 usdc_amount: swap_data.amount_sold as f64,
-                floating_asset_code: format_asset_code(swap_data.asset_bought),
-                floating_asset_issuer: format_asset_issuer(swap_data.asset_bought),
+                floating_asset_code: asset_bought.code.to_string(),
+                floating_asset_issuer: asset_bought.issuer.to_string(),
                 price_numerator: swap_data.amount_bought,
                 price_denominator: swap_data.amount_sold,
             })
-        } else if *swap_data.asset_bought == USDC && is_floating_asset_valid(swap_data.asset_sold) {
+        } else if *asset_bought == USDC {
             Ok(Swap {
                 created_at: None,
                 usdc_amount: swap_data.amount_bought as f64,
-                floating_asset_code: format_asset_code(swap_data.asset_sold),
-                floating_asset_issuer: format_asset_issuer(swap_data.asset_sold),
+                floating_asset_code: asset_sold.code.to_string(),
+                floating_asset_issuer: asset_sold.issuer.to_string(),
                 price_numerator: swap_data.amount_sold,
                 price_denominator: swap_data.amount_bought,
             })
         } else {
-            Err("Cannot create swap: no USDC involved, or invalid counterasset.".into())
+            Err("Swap does not involve USDC".to_string())
         }
     }
 }
