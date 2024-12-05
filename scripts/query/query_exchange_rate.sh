@@ -8,6 +8,7 @@ exit_code=$?
 
 # The arguments might be invalid or the user might have called --help
 if [ $exit_code -ne 0 ]; then
+    [ "$1" = "--help" ] || [ "$1" = "-h" ] && echo "$HELP_MESSAGE" && exit 0
     exit $exit_code
 fi
 
