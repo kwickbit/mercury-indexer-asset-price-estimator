@@ -24,4 +24,9 @@ Cargo.lock
 .env
 
 # Code that's currently running
-deploy/
+# We want to ignore all files and subdirectories in the deploy directory that's
+# directly under the project root, but not the one in the scripts directory.
+# Writing just `deploy` would ignore the one in the scripts directory, so it is
+# not the solution.
+deploy/*
+
