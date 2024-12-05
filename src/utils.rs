@@ -1,11 +1,15 @@
 use stellar_strkey::{Contract, Strkey};
 
 use zephyr_sdk::soroban_sdk::xdr::{
-    ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, Hash, ManageBuyOfferResult, ManageSellOfferResult, OperationResult, OperationResultTr, PathPaymentStrictReceiveResult, PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendResult, PathPaymentStrictSendResultSuccess, ScAddress, ScMap, ScVal, ScVec, TransactionResultMeta, TransactionResultResult
+    ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, Hash, ManageBuyOfferResult,
+    ManageSellOfferResult, OperationResult, OperationResultTr, PathPaymentStrictReceiveResult,
+    PathPaymentStrictReceiveResultSuccess, PathPaymentStrictSendResult,
+    PathPaymentStrictSendResultSuccess, ScAddress, ScMap, ScVal, ScVec, TransactionResultMeta,
+    TransactionResultResult,
 };
 
 use crate::{
-    config::{scam_addresses::SCAM_ADDRESSES, soroswap_tokens::SOROSWAP_TOKENS},
+    config::{scam_addresses::SCAM_ADDRESSES, soroswap_tokens::SOROSWAP_TOKENS, XLM_ADDRESS},
     db::swap::{SwapAsset, SwapData},
 };
 
@@ -144,9 +148,17 @@ pub(crate) fn hash_to_strkey(hash: &Hash) -> String {
  * Given a contract address, return a SwapAsset with the asset code and issuer.
  */
 pub(crate) fn get_swap_asset(contract_address: String) -> Option<&'static SwapAsset> {
-    SOROSWAP_TOKENS
-        .iter()
-        .find(|asset| asset.contract == contract_address)
+    if contract_address == XLM_ADDRESS {
+        Some(&SwapAsset {
+            code: "XLM",
+            issuer: "Native",
+            contract: XLM_ADDRESS,
+        })
+    } else {
+        SOROSWAP_TOKENS
+            .iter()
+            .find(|asset| asset.contract == contract_address)
+    }
 }
 
 /**
@@ -159,13 +171,11 @@ pub(crate) fn get_address_from_scval(val: &ScVal) -> Option<String> {
     }
 }
 
-
 /**
  * Given a ScMap, return the value of a given key if it exists.
  */
 pub(crate) fn scmap_get(map: &ScMap, key: String) -> Option<&ScVec> {
-    map
-        .0
+    map.0
         .iter()
         .find(|entry| {
             matches!(

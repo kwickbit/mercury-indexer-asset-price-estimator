@@ -6,6 +6,7 @@ use zephyr_sdk::EnvClient;
 use crate::{
     config::CONVERSION_FACTOR,
     db::{exchange_rate::RatesDbRow, savepoint::Savepoint, swap::SwapDbRow},
+    filter::Soroswap,
     utils::is_certified_asset,
 };
 
@@ -47,6 +48,19 @@ pub extern "C" fn get_all_currencies() {
     currencies.sort();
 
     client.conclude(serde_json::json!(currencies));
+}
+
+#[no_mangle]
+pub extern "C" fn get_soroswap_swaps() {
+    let client = EnvClient::empty();
+    let soroswap_swaps = client.read::<Soroswap>();
+
+    let response = soroswap_swaps
+        .iter()
+        .map(|row| row.swap.clone())
+        .collect::<Vec<_>>();
+
+    client.conclude(serde_json::json!(response));
 }
 
 #[no_mangle]
