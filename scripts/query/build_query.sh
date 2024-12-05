@@ -33,6 +33,9 @@ build_query() {
     elif [ "$command" = "savepoint" ]; then
         fname="savepoint"
         arguments="{}"
+    elif [ "$command" = "soroswaps" ]; then
+        fname="get_soroswap_swaps"
+        arguments="{}"
     fi
     echo "{\"project_name\": \"kwickbit\", \"mode\": {\"Function\": {\"fname\": \"$fname\", \"arguments\": \"$arguments\"}}}"
 }

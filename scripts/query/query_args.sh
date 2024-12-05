@@ -18,11 +18,6 @@ parse_arguments() {
                 echo "$HELP_MESSAGE"
                 return 1
                 ;;
-            # read all exchange rates
-            all)
-                command="all"
-                shift
-                ;;
             # the main method, to read exchange rates for a specific asset
             asset)
                 command="asset"
@@ -58,19 +53,9 @@ parse_arguments() {
                     shift
                 fi
                 ;;
-            # helper to read all currencies we have exchange rates for
-            currencies)
-                command="currencies"
-                shift
-                ;;
-            # helper to read all duplicate swaps
-            duplicates)
-                command="duplicates"
-                shift
-                ;;
-            # savepoint to check the API can call the DB
-            savepoint)
-                command="savepoint"
+            # Nullary functions; the command is the same as the passed argument
+            all|currencies|duplicates|savepoint|soroswaps)
+                command=$1
                 shift
                 ;;
             *)
