@@ -8,28 +8,49 @@ use db::swap::Swap;
 use zephyr_sdk::EnvClient;
 
 #[no_mangle]
-/**
- * On every ledger close, we read the swaps from the latest sequence and save
- * them. Once a configured time window has passed, we calculate exchange rates
- * based on those swaps and save them.
- */
 pub extern "C" fn on_close() {
-    // The basics
+    // Get data from the latest ledger
     let client = EnvClient::new();
-
-    // Read and save the swaps from the latest sequence
     let results = client.reader().tx_processing();
-    let swaps = filter::swaps(results);
     let soroban_events = client.reader().soroban_events();
-    let soroban_swaps = filter::soroswap_swaps(soroban_events);
-    db::save_swaps(
-        &client,
-        &swaps
-            .into_iter()
-            .chain(soroban_swaps)
-            .collect::<Vec<Swap>>(),
+
+    // Extract the swaps
+    let swaps = filter::swaps(results);
+    let soroswap_swaps = filter::soroswap_swaps(soroban_events);
+
+    if !soroswap_swaps.is_empty() {
+        let swaps_string = soroswap_swaps
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>()
+            .join(" // ");
+
+        client.log().debug(
+            format!(
+                "Sequence #{}: {swaps_string}",
+                client.reader().ledger_sequence(),
+            ),
+            None,
+        );
+    }
+
+    // Save swaps and, if it is time, calculate and save the exchange rates
+    let all_swaps = &swaps
+        .clone()
+        .into_iter()
+        .chain(soroswap_swaps.clone())
+        .collect::<Vec<Swap>>();
+
+    client.log().debug(
+        format!(
+            "Saving {} swaps: {} classic and {} Soroswap",
+            all_swaps.len(),
+            swaps.len(),
+            soroswap_swaps.len()
+        ),
+        None,
     );
 
-    // If it is time, calculate and save the exchange rates from the latest sequence
+    db::save_swaps(&client, all_swaps);
     db::save_rates(&client);
 }

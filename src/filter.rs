@@ -4,7 +4,7 @@ use zephyr_sdk::soroban_sdk::xdr::{
 };
 use zephyr_sdk::EnvClient;
 
-use crate::config::SOROSWAP_ROUTER;
+use crate::config::{SOROSWAP_ROUTER, USDC};
 use crate::db::swap::{Swap, SwapData};
 use crate::utils::{
     extract_claim_atom_data, extract_transaction_results, get_address_from_scval,
@@ -51,16 +51,6 @@ fn soroswap_event(event: ContractEvent) -> Option<ScVal> {
         .iter()
         .any(|topic| matches!(topic, ScVal::Symbol(s) if s.to_string() == "swap"));
 
-    if event_contract == SOROSWAP_ROUTER && is_swap {
-        EnvClient::empty().log().debug(
-            format!(
-                "SoroswapRouter swap happened: {:?}",
-                body.data
-            ),
-            None,
-        );
-    }
-
     (event_contract == SOROSWAP_ROUTER && is_swap).then_some(body.data)
 }
 
@@ -100,24 +90,24 @@ fn swaps_from_event(event: ScVal) -> Vec<Swap> {
     swaps_from_path_and_amounts(path.unwrap(), amounts.unwrap())
 }
 
-fn swaps_from_path_and_amounts(assets_in_path: &ScVec, amounts_in_path: &ScVec) -> Vec<Swap> {
-    assets_in_path
+fn swaps_from_path_and_amounts(assets: &ScVec, amounts: &ScVec) -> Vec<Swap> {
+    assets
         .0
         .windows(2)
-        .zip(amounts_in_path.0.windows(2))
+        .zip(amounts.0.windows(2))
         .filter_map(swap_from_amounts_and_assets)
         .collect()
 }
 
 use zephyr_sdk::{prelude::*, DatabaseDerive};
 
-#[derive(Clone, DatabaseDerive)]
-#[with_name("soroswap")]
-struct Soroswap {
+#[derive(Clone, DatabaseDerive, Debug)]
+#[with_name("soroswaps")]
+pub struct Soroswap {
     pub swap: String,
 }
 
-fn swap_from_amounts_and_assets((amounts, assets): (&[ScVal], &[ScVal])) -> Option<Swap> {
+fn swap_from_amounts_and_assets((assets, amounts): (&[ScVal], &[ScVal])) -> Option<Swap> {
     let (ScVal::I128(n1), ScVal::I128(n2)) = (&amounts[0], &amounts[1]) else {
         return None;
     };
@@ -134,14 +124,16 @@ fn swap_from_amounts_and_assets((amounts, assets): (&[ScVal], &[ScVal])) -> Opti
         asset_sold: Some(*asset_sold),
     };
 
-    let soroswap = Soroswap {
-        swap: format!(
-            "Swap data: {} {} for {} {}",
-            amount_sold, asset_sold.code, amount_bought, asset_bought.code
-        ),
-    };
+    if *asset_bought == USDC || *asset_sold == USDC {
+        let soroswap = Soroswap {
+            swap: format!(
+                "Swap data: {} {} for {} {}",
+                amount_sold, asset_sold.code, amount_bought, asset_bought.code
+            ),
+        };
 
-    soroswap.put(&EnvClient::new());
+        soroswap.put(&EnvClient::new());
+    }
 
     Swap::try_from(&swap_data).ok()
 }

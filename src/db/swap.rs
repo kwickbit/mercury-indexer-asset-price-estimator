@@ -7,7 +7,7 @@ use zephyr_sdk::{
 };
 
 use crate::{
-    config::{CONVERSION_FACTOR, USDC},
+    config::{CONVERSION_FACTOR, USDC, XLM_ADDRESS},
     utils::build_nonnative_swap_asset,
 };
 
@@ -50,7 +50,7 @@ impl TryFrom<&Asset> for SwapAsset {
             Asset::Native => Ok(SwapAsset {
                 code: "XLM",
                 issuer: "Native",
-                contract: "Native",
+                contract: XLM_ADDRESS,
             }),
             Asset::CreditAlphanum4(AlphaNum4 { asset_code, issuer }) => {
                 build_nonnative_swap_asset(asset_code.as_slice(), issuer.to_string()).copied()

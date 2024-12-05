@@ -3,6 +3,9 @@ pub(crate) mod soroswap_tokens;
 
 use crate::db::swap::SwapAsset;
 
+// On Soroban, every asset needs a contract address - even XLM.
+pub const XLM_ADDRESS: &str = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
+
 // We focus on USDC, the most-used stablecoin on the Stellar network.
 pub const USDC: SwapAsset = SwapAsset {
     code: "USDC",
