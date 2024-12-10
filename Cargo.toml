@@ -10,7 +10,7 @@ serde = "1.0.210"
 serde_json = "1.0.128"
 stellar-strkey = "0.0.11"
 time = { version = "0.3.36", features = ["formatting", "macros", "parsing"] }
-zephyr-sdk = "0.2.4"
+zephyr-sdk = { version = "0.2.4", git="https://github.com/xycloo/rs-zephyr-toolkit", rev="3054505" }
 
 [lib]
 crate-type = ["cdylib"]
