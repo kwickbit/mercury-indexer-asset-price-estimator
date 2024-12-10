@@ -21,7 +21,7 @@ pub(crate) struct ExchangeRateRequest {
 enum ExchangeRateError {
     DatabaseError,
     InvalidDate,
-    NotFound,
+    NotFound(String),
 }
 
 struct ValidatedRequest {
@@ -35,9 +35,9 @@ pub extern "C" fn get_exchange_rate() {
     let client = EnvClient::empty();
     let request = client.read_request_body::<ExchangeRateRequest>();
 
-    let response = match handle_request(&client, request) {
+    let response = match handle_request(&client, &request) {
         Ok(data) => build_ok_response(data),
-        Err(error) => build_error_response(error),
+        Err(error) => build_error_response(error, &request),
     };
 
     client.conclude(&response);
@@ -45,17 +45,17 @@ pub extern "C" fn get_exchange_rate() {
 
 fn handle_request(
     client: &EnvClient,
-    request: ExchangeRateRequest,
+    request: &ExchangeRateRequest,
 ) -> Result<Vec<RatesDbRow>, ExchangeRateError> {
     let validated_request = validate_request(request)?;
     let db_results = query_database(client, &validated_request)?;
     process_results(db_results, &validated_request)
 }
 
-fn validate_request(request: ExchangeRateRequest) -> Result<ValidatedRequest, ExchangeRateError> {
-    let timestamp = match request.date {
+fn validate_request(request: &ExchangeRateRequest) -> Result<ValidatedRequest, ExchangeRateError> {
+    let timestamp = match &request.date {
         Some(date_str) => Some(
-            time::PrimitiveDateTime::parse(&date_str, &Iso8601::DEFAULT)
+            time::PrimitiveDateTime::parse(date_str, &Iso8601::DEFAULT)
                 .map_err(|_| ExchangeRateError::InvalidDate)?
                 .assume_utc()
                 .unix_timestamp(),
@@ -67,11 +67,11 @@ fn validate_request(request: ExchangeRateRequest) -> Result<ValidatedRequest, Ex
     let asset_issuer = if request.asset_code == "XLM" {
         Some("Native".to_string())
     } else {
-        request.asset_issuer
+        request.asset_issuer.clone()
     };
 
     Ok(ValidatedRequest {
-        asset_code: request.asset_code,
+        asset_code: request.asset_code.clone(),
         asset_issuer,
         timestamp,
     })
@@ -94,7 +94,7 @@ fn query_database(
             client
                 .read::<Savepoint>()
                 .first()
-                .ok_or(ExchangeRateError::NotFound)?
+                .ok_or(ExchangeRateError::NotFound("timestamp".to_string()))?
                 .savepoint as i64
         }
     };
@@ -119,7 +119,7 @@ fn process_results(
     });
 
     if processed_results.is_empty() {
-        Err(ExchangeRateError::NotFound)
+        Err(ExchangeRateError::NotFound("exchange rate".to_string()))
     } else {
         Ok(processed_results.into_values().collect::<Vec<_>>())
     }
@@ -144,7 +144,10 @@ fn build_ok_response(mut rate_data: Vec<RatesDbRow>) -> serde_json::Value {
     })
 }
 
-fn build_error_response(error: ExchangeRateError) -> serde_json::Value {
+fn build_error_response(
+    error: ExchangeRateError,
+    request: &ExchangeRateRequest,
+) -> serde_json::Value {
     let (status, message) = match error {
         ExchangeRateError::InvalidDate => (
             400,
@@ -152,7 +155,7 @@ fn build_error_response(error: ExchangeRateError) -> serde_json::Value {
             //       the use of a space between the day and hour
             "Invalid date format. Please use the format '2020-09-16T14:30:00'.",
         ),
-        ExchangeRateError::NotFound => (404, "No exchange rate found."),
+        ExchangeRateError::NotFound(object) => (404, &*format!("No {object} found.")),
         ExchangeRateError::DatabaseError => (500, "An error occurred while querying the database."),
     };
 
@@ -160,6 +163,7 @@ fn build_error_response(error: ExchangeRateError) -> serde_json::Value {
         "status": status,
         "data": {
             "error": message,
+            "request": request,
         },
     })
 }
