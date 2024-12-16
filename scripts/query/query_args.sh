@@ -54,7 +54,7 @@ parse_arguments() {
                 fi
                 ;;
             # Nullary functions; the command is the same as the passed argument
-            all|currencies|duplicates|savepoint|soroswaps)
+            all|currencies|duplicates|history|savepoint|soroswaps)
                 command=$1
                 shift
                 ;;

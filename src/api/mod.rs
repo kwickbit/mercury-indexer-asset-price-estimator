@@ -1,4 +1,5 @@
 pub(crate) mod extras;
+pub(crate) mod rates_history;
 
 use std::{cmp::Ordering::Equal, collections::HashMap};
 

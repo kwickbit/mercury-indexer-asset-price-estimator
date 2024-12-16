@@ -30,6 +30,9 @@ build_query() {
     elif [ "$command" = "duplicates" ]; then
         fname="get_duplicate_swaps"
         arguments="{}"
+    elif [ "$command" = "history" ]; then
+        fname="get_exchange_rate_history"
+        arguments=$(cat "${BASE_DIR}/indexer/scripts/query/history_request.json" | tr -d '\n' | sed 's/"/\\"/g')
     elif [ "$command" = "savepoint" ]; then
         fname="savepoint"
         arguments="{}"
