@@ -1,0 +1,26 @@
+{
+    "assets": [
+        {
+            "asset": {
+                "asset_code": "XLM"
+            },
+            "transaction_dates": [
+                "2024-11-09T16:01:00Z",
+                "2024-11-15T16:01:00Z",
+                "2024-12-01T16:01:00Z"
+            ],
+            "unrealized_date": "2024-12-16T03:05:00Z"
+        },
+        {
+            "asset": {
+                "asset_code": "BTC",
+                "asset_issuer": "GDYTPLRPLGQRF7OUUUB3XD6N6PO5F2567W3SF3U7WCDOIGNS5XOT6ISO"
+            },
+            "transaction_dates": [
+                "2024-11-11T16:01:00Z",
+                "2024-11-15T16:01:00Z"
+            ],
+            "unrealized_date": "2024-11-16T16:01:00Z"
+        }
+    ]
+}
