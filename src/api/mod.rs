@@ -1,5 +1,6 @@
 pub(crate) mod extras;
 pub(crate) mod rates_history;
+pub(crate) mod shared;
 
 use std::{cmp::Ordering::Equal, collections::HashMap};
 
@@ -11,6 +12,8 @@ use crate::{
     db::{exchange_rate::RatesDbRow, savepoint::Savepoint},
     utils::is_certified_asset,
 };
+
+use shared::query_db;
 
 #[derive(Deserialize, Serialize)]
 pub(crate) struct ExchangeRateRequest {
@@ -100,10 +103,7 @@ fn query_database(
         }
     };
 
-    query
-        .column_lt("timestamp", timestamp)
-        .read::<RatesDbRow>()
-        .map_err(|_| ExchangeRateError::DatabaseError)
+    query_db(query, timestamp)
 }
 
 fn process_results(
