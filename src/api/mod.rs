@@ -10,7 +10,7 @@ use zephyr_sdk::EnvClient;
 
 use crate::{
     db::{exchange_rate::RatesDbRow, savepoint::Savepoint},
-    utils::is_certified_asset,
+    utils::{is_certified_asset, parse_date},
 };
 
 use shared::query_db;
@@ -110,6 +110,7 @@ fn process_results(
     results: Vec<RatesDbRow>,
     request: &ValidatedRequest,
 ) -> Result<Vec<RatesDbRow>, ExchangeRateError> {
+    // We keep only the most recent exchange rate for each issuer
     let processed_results = results.into_iter().fold(HashMap::new(), |mut acc, row| {
         if request.asset_issuer.as_ref() == Some(&row.fltissuer) || request.asset_issuer.is_none() {
             acc.entry(row.fltissuer.clone())
@@ -126,8 +127,19 @@ fn process_results(
     }
 }
 
-fn build_ok_response(mut rate_data: Vec<RatesDbRow>) -> serde_json::Value {
-    rate_data.sort_by(|a, b| b.volume.partial_cmp(&a.volume).unwrap_or(Equal));
+fn build_ok_response(
+    rate_data: Vec<RatesDbRow>,
+    request: &ExchangeRateRequest,
+) -> serde_json::Value {
+    let request_datetime = parse_date(
+        &parse_timestamp(
+            &request
+                .date
+                .clone()
+                .unwrap_or("2024-12-18T16:01:00Z".to_string()),
+        )
+        .unwrap(),
+    );
 
     serde_json::json!({
         "status": 200,
@@ -136,7 +148,8 @@ fn build_ok_response(mut rate_data: Vec<RatesDbRow>) -> serde_json::Value {
                 "asset_code": row.floatcode,
                 "asset_issuer": row.fltissuer,
                 "base_currency": "USD",
-                "date_time": row.timestamp_iso8601(),
+                "rate_date_time": row.timestamp_iso8601(),
+                "rate_request_date_time": request_datetime,
                 "exchange_rate": row.rate.to_string(),
                 "soroswap_certified_asset": is_certified_asset(&row.floatcode, &row.fltissuer),
                 "volume": row.volume.to_string(),
@@ -145,10 +158,7 @@ fn build_ok_response(mut rate_data: Vec<RatesDbRow>) -> serde_json::Value {
     })
 }
 
-fn build_error_response(
-    error: ExchangeRateError,
-    request: &ExchangeRateRequest,
-) -> serde_json::Value {
+fn build_error_response(error: ExchangeRateError) -> serde_json::Value {
     let (status, message) = match error {
         ExchangeRateError::InvalidDate => (
             400,
@@ -158,13 +168,13 @@ fn build_error_response(
         ),
         ExchangeRateError::NotFound(object) => (404, &*format!("No {object} found.")),
         ExchangeRateError::DatabaseError => (500, "An error occurred while querying the database."),
+        _ => unreachable!(),
     };
 
     serde_json::json!({
         "status": status,
         "data": {
             "error": message,
-            "request": request,
         },
     })
 }

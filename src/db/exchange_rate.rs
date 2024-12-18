@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
-use time::{format_description::well_known::Iso8601, OffsetDateTime};
 use zephyr_sdk::{prelude::*, DatabaseDerive, EnvClient};
 
 use super::swap::SwapDbRow;
-use crate::config::CONVERSION_FACTOR;
+use crate::{config::CONVERSION_FACTOR, utils::parse_date};
 
 pub type UsdVolume = f64;
 pub type WeightedSum = f64;
@@ -23,10 +22,7 @@ pub(crate) struct RatesDbRow {
 
 impl RatesDbRow {
     pub(crate) fn timestamp_iso8601(&self) -> String {
-        OffsetDateTime::from_unix_timestamp(self.timestamp as i64)
-            .unwrap()
-            .format(&Iso8601::DEFAULT)
-            .unwrap()
+        parse_date(&(self.timestamp as i64))
     }
 }
 
