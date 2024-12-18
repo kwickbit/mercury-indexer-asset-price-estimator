@@ -1,5 +1,6 @@
 use stellar_strkey::{Contract, Strkey};
 
+use time::{format_description::well_known::Iso8601, OffsetDateTime};
 use zephyr_sdk::soroban_sdk::xdr::{
     ClaimAtom, ClaimLiquidityAtom, ClaimOfferAtom, ClaimOfferAtomV0, Hash, ManageBuyOfferResult,
     ManageSellOfferResult, OperationResult, OperationResultTr, PathPaymentStrictReceiveResult,
@@ -187,4 +188,14 @@ pub(crate) fn scmap_get(map: &ScMap, key: String) -> Option<&ScVec> {
             ScVal::Vec(Some(value)) => Some(value),
             _ => None,
         })
+}
+
+/**
+ * Return the string representation of a timestamp.
+ */
+pub(crate) fn parse_date(timestamp: &i64) -> String {
+    OffsetDateTime::from_unix_timestamp(*timestamp)
+        .unwrap()
+        .format(&Iso8601::DEFAULT)
+        .unwrap()
 }
