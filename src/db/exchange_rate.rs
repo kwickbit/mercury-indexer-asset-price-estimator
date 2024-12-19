@@ -72,8 +72,19 @@ fn calculate_rates(swaps: Vec<SwapDbRow>) -> ExchangeRateMap {
         .iter()
         .fold(HashMap::new(), extract_amounts)
         .into_iter()
-        .map(|(key, (weighted_sum, total_amount))| {
-            (key, (weighted_sum / total_amount, total_amount))
+        .filter_map(|(key, (weighted_sum, total_amount))| {
+            let rate = weighted_sum / total_amount;
+            if rate.is_nan() {
+                EnvClient::empty().log().error(
+                    format!(
+                        "Found NaN exchange rate for asset {key}. Numerator is {weighted_sum} and denominator is {total_amount}."
+                    ),
+                    None,
+                );
+                None
+            } else {
+                Some((key, (rate, total_amount)))
+            }
         })
         .collect::<ExchangeRateMap>()
 }

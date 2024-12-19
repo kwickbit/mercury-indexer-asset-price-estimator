@@ -42,7 +42,13 @@ pub(super) fn query_db(
     let mut rows = query
         .column_lt("timestamp", timestamp)
         .read::<RatesDbRow>()
-        .map_err(|_| ExchangeRateError::DatabaseError)?;
+        .map_err(|_| ExchangeRateError::DatabaseError)?
+        .into_iter()
+
+        // Maybe it was some blunder during development, but some NaN exchange
+        // rates crept into the DB. We filter them out.
+        .filter(|row| row.rate.to_string() != "NaN")
+        .collect::<Vec<RatesDbRow>>();
 
     rows.sort_by_key(|row| row.timestamp);
     Ok(rows)
