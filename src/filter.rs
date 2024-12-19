@@ -1,11 +1,10 @@
 use zephyr_sdk::soroban_sdk::xdr::{
-    ContractEvent, ContractEventBody, OperationResultTr, ScVal, ScVec, TransactionResultMeta,
+    ContractEvent, ContractEventBody, OperationResultTr, ScVal, TransactionResultMeta,
     TransactionResultResult,
 };
-use zephyr_sdk::EnvClient;
 
-use crate::config::{SOROSWAP_ROUTER, USDC};
-use crate::db::swap::{Swap, SwapData};
+use crate::config::SOROSWAP_ROUTER;
+use crate::db::swap::{Soroswap, Swap, SwapData};
 use crate::utils::{
     extract_claim_atom_data, extract_transaction_results, get_address_from_scval,
     get_claims_from_operation, get_swap_asset, hash_to_strkey, scmap_get,
@@ -27,6 +26,27 @@ pub(crate) fn swaps(transaction_results: Vec<TransactionResultMeta>) -> Vec<Swap
         .iter()
         .filter(is_transaction_successful)
         .flat_map(swaps_from_transaction)
+        .collect()
+}
+
+fn is_transaction_successful(transaction: &&TransactionResultMeta) -> bool {
+    matches!(
+        transaction.result.result.result,
+        TransactionResultResult::TxSuccess(_)
+    )
+}
+
+fn swaps_from_transaction(transaction: &TransactionResultMeta) -> Vec<Swap> {
+    let operations = extract_transaction_results(transaction);
+    operations.iter().flat_map(swaps_from_operation).collect()
+}
+
+fn swaps_from_operation(operation: &OperationResultTr) -> Vec<Swap> {
+    let claims = get_claims_from_operation(operation);
+
+    claims
+        .iter()
+        .filter_map(|claim| Swap::try_from(&extract_claim_atom_data(claim)).ok())
         .collect()
 }
 
@@ -54,57 +74,23 @@ fn soroswap_event(event: ContractEvent) -> Option<ScVal> {
     (event_contract == SOROSWAP_ROUTER && is_swap).then_some(body.data)
 }
 
-fn is_transaction_successful(transaction: &&TransactionResultMeta) -> bool {
-    matches!(
-        transaction.result.result.result,
-        TransactionResultResult::TxSuccess(_)
-    )
-}
-
-fn swaps_from_transaction(transaction: &TransactionResultMeta) -> Vec<Swap> {
-    let operations = extract_transaction_results(transaction);
-    operations.iter().flat_map(swaps_from_operation).collect()
-}
-
-fn swaps_from_operation(operation: &OperationResultTr) -> Vec<Swap> {
-    let claims = get_claims_from_operation(operation);
-
-    claims
-        .iter()
-        .filter_map(|claim| Swap::try_from(&extract_claim_atom_data(claim)).ok())
-        .collect()
-}
-
 fn swaps_from_event(event: ScVal) -> Vec<Swap> {
     let ScVal::Map(Some(map)) = event else {
         return vec![];
     };
 
-    let path = scmap_get(&map, "path".to_string());
-    let amounts = scmap_get(&map, "amounts".to_string());
+    let path = scmap_get(&map, "path".to_string()).map_or(vec![], |sc_vec| sc_vec.0.to_vec());
+    let amounts = scmap_get(&map, "amounts".to_string()).map_or(vec![], |sc_vec| sc_vec.0.to_vec());
 
-    if path.is_none() || amounts.is_none() {
-        return vec![];
-    }
-
-    swaps_from_path_and_amounts(path.unwrap(), amounts.unwrap())
+    swaps_from_path_and_amounts(path, amounts)
 }
 
-fn swaps_from_path_and_amounts(assets: &ScVec, amounts: &ScVec) -> Vec<Swap> {
+fn swaps_from_path_and_amounts(assets: Vec<ScVal>, amounts: Vec<ScVal>) -> Vec<Swap> {
     assets
-        .0
         .windows(2)
-        .zip(amounts.0.windows(2))
+        .zip(amounts.windows(2))
         .filter_map(swap_from_amounts_and_assets)
         .collect()
-}
-
-use zephyr_sdk::{prelude::*, DatabaseDerive};
-
-#[derive(Clone, DatabaseDerive, Debug)]
-#[with_name("soroswaps")]
-pub struct Soroswap {
-    pub swap: String,
 }
 
 fn swap_from_amounts_and_assets((assets, amounts): (&[ScVal], &[ScVal])) -> Option<Swap> {
@@ -124,16 +110,8 @@ fn swap_from_amounts_and_assets((assets, amounts): (&[ScVal], &[ScVal])) -> Opti
         asset_sold: Some(*asset_sold),
     };
 
-    if *asset_bought == USDC || *asset_sold == USDC {
-        let soroswap = Soroswap {
-            swap: format!(
-                "Swap data: {} {} for {} {}",
-                amount_sold, asset_sold.code, amount_bought, asset_bought.code
-            ),
-        };
-
-        soroswap.put(&EnvClient::new());
-    }
+    // Only save the swap if it involves USDC
+    Soroswap::save(&swap_data);
 
     Swap::try_from(&swap_data).ok()
 }

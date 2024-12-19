@@ -5,8 +5,7 @@ use zephyr_sdk::EnvClient;
 
 use crate::{
     config::CONVERSION_FACTOR,
-    db::{exchange_rate::RatesDbRow, savepoint::Savepoint, swap::SwapDbRow},
-    filter::Soroswap,
+    db::{exchange_rate::RatesDbRow, savepoint::Savepoint, swap::{Soroswap, SwapDbRow}},
     utils::is_certified_asset,
 };
 

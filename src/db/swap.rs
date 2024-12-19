@@ -153,3 +153,30 @@ impl From<&SwapDbRow> for Swap {
         }
     }
 }
+
+#[derive(Clone, DatabaseDerive)]
+#[with_name("soroswaps")]
+pub struct Soroswap {
+    pub swap: String,
+}
+
+impl Soroswap {
+    pub fn save(swap_data: &SwapData) {
+        let asset_bought = swap_data.asset_bought.as_ref().unwrap();
+        let asset_sold = swap_data.asset_sold.as_ref().unwrap();
+
+        if *asset_bought == USDC || *asset_sold == USDC {
+            let soroswap = Self {
+                swap: format!(
+                    "Swap data: {} {} for {} {}",
+                    swap_data.amount_sold,
+                    asset_sold.code,
+                    swap_data.amount_bought,
+                    asset_bought.code
+                ),
+            };
+
+            soroswap.put(&EnvClient::new());
+        }
+    }
+}
