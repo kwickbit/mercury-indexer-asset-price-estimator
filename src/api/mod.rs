@@ -5,15 +5,15 @@ pub(crate) mod shared;
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use time::format_description::well_known::Iso8601;
 use zephyr_sdk::EnvClient;
 
 use crate::{
     db::{exchange_rate::RatesDbRow, savepoint::Savepoint},
-    utils::{is_certified_asset, parse_date},
+    utils::is_certified_asset,
 };
-
-use shared::query_db;
+use shared::{
+    normalize_issuer, parse_timestamp, query_db, ExchangeRateError, NormalizeAssetIssuer,
+};
 
 #[derive(Deserialize, Serialize)]
 pub(crate) struct ExchangeRateRequest {
@@ -22,10 +22,10 @@ pub(crate) struct ExchangeRateRequest {
     date: Option<String>,
 }
 
-enum ExchangeRateError {
-    DatabaseError,
-    InvalidDate,
-    NotFound(String),
+impl NormalizeAssetIssuer for ExchangeRateRequest {
+    fn normalize_issuer(&self) -> Option<String> {
+        normalize_issuer(&self.asset_code, &self.asset_issuer)
+    }
 }
 
 struct ValidatedRequest {
@@ -55,21 +55,12 @@ fn handle_request(request: &ExchangeRateRequest) -> Result<Vec<RatesDbRow>, Exch
 
 fn validate_request(request: &ExchangeRateRequest) -> Result<ValidatedRequest, ExchangeRateError> {
     let timestamp = match &request.date {
-        Some(date_str) => Some(
-            time::PrimitiveDateTime::parse(date_str, &Iso8601::DEFAULT)
-                .map_err(|_| ExchangeRateError::InvalidDate)?
-                .assume_utc()
-                .unix_timestamp(),
-        ),
+        Some(date_str) => Some(parse_timestamp(date_str)?),
         None => None,
     };
 
     // We don't allow non-native tokens named XLM.
-    let asset_issuer = if request.asset_code == "XLM" {
-        Some("Native".to_string())
-    } else {
-        request.asset_issuer.clone()
-    };
+    let asset_issuer = request.normalize_issuer();
 
     Ok(ValidatedRequest {
         asset_code: request.asset_code.clone(),
