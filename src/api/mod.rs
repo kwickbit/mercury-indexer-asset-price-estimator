@@ -2,7 +2,7 @@ pub(crate) mod extras;
 pub(crate) mod rates_history;
 pub(crate) mod shared;
 
-use std::{cmp::Ordering::Equal, collections::HashMap};
+use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use time::format_description::well_known::Iso8601;
@@ -39,20 +39,17 @@ pub extern "C" fn get_exchange_rate() {
     let client = EnvClient::empty();
     let request = client.read_request_body::<ExchangeRateRequest>();
 
-    let response = match handle_request(&client, &request) {
+    let response = match handle_request(&request) {
         Ok(data) => build_ok_response(data),
-        Err(error) => build_error_response(error, &request),
+        Err(error) => build_error_response(error),
     };
 
     client.conclude(&response);
 }
 
-fn handle_request(
-    client: &EnvClient,
-    request: &ExchangeRateRequest,
-) -> Result<Vec<RatesDbRow>, ExchangeRateError> {
+fn handle_request(request: &ExchangeRateRequest) -> Result<Vec<RatesDbRow>, ExchangeRateError> {
     let validated_request = validate_request(request)?;
-    let db_results = query_database(client, &validated_request)?;
+    let db_results = query_database(&validated_request)?;
     process_results(db_results, &validated_request)
 }
 
@@ -81,10 +78,8 @@ fn validate_request(request: &ExchangeRateRequest) -> Result<ValidatedRequest, E
     })
 }
 
-fn query_database(
-    client: &EnvClient,
-    params: &ValidatedRequest,
-) -> Result<Vec<RatesDbRow>, ExchangeRateError> {
+fn query_database(params: &ValidatedRequest) -> Result<Vec<RatesDbRow>, ExchangeRateError> {
+    let client = EnvClient::empty();
     let mut query = client.read_filter();
     query.column_equal_to("floatcode", params.asset_code.clone());
 
@@ -127,20 +122,7 @@ fn process_results(
     }
 }
 
-fn build_ok_response(
-    rate_data: Vec<RatesDbRow>,
-    request: &ExchangeRateRequest,
-) -> serde_json::Value {
-    let request_datetime = parse_date(
-        &parse_timestamp(
-            &request
-                .date
-                .clone()
-                .unwrap_or("2024-12-18T16:01:00Z".to_string()),
-        )
-        .unwrap(),
-    );
-
+fn build_ok_response(rate_data: Vec<RatesDbRow>) -> serde_json::Value {
     serde_json::json!({
         "status": 200,
         "data": rate_data.into_iter().map(|row| {
@@ -149,7 +131,6 @@ fn build_ok_response(
                 "asset_issuer": row.fltissuer,
                 "base_currency": "USD",
                 "rate_date_time": row.timestamp_iso8601(),
-                "rate_request_date_time": request_datetime,
                 "exchange_rate": row.rate.to_string(),
                 "soroswap_certified_asset": is_certified_asset(&row.floatcode, &row.fltissuer),
                 "volume": row.volume.to_string(),
@@ -168,6 +149,7 @@ fn build_error_response(error: ExchangeRateError) -> serde_json::Value {
         ),
         ExchangeRateError::NotFound(object) => (404, &*format!("No {object} found.")),
         ExchangeRateError::DatabaseError => (500, "An error occurred while querying the database."),
+        // Other error types can only happen in the batch exchange rate endpoint.
         _ => unreachable!(),
     };
 
