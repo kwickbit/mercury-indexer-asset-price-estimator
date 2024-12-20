@@ -114,10 +114,10 @@ impl TryFrom<&SwapData> for Swap {
             return Err("Invalid asset in swap".to_string());
         }
 
-        let asset_sold = swap_data.asset_sold.as_ref().unwrap();
-        let asset_bought = swap_data.asset_bought.as_ref().unwrap();
+        let asset_sold = swap_data.asset_sold.unwrap();
+        let asset_bought = swap_data.asset_bought.unwrap();
 
-        if *asset_sold == USDC {
+        if asset_sold == USDC {
             Ok(Swap {
                 created_at: None,
                 usdc_amount: swap_data.amount_sold as f64,
@@ -126,7 +126,7 @@ impl TryFrom<&SwapData> for Swap {
                 price_numerator: swap_data.amount_bought,
                 price_denominator: swap_data.amount_sold,
             })
-        } else if *asset_bought == USDC {
+        } else if asset_bought == USDC {
             Ok(Swap {
                 created_at: None,
                 usdc_amount: swap_data.amount_bought as f64,
