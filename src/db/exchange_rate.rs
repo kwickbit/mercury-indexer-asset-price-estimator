@@ -5,19 +5,19 @@ use zephyr_sdk::{prelude::*, DatabaseDerive, EnvClient};
 use super::swap::SwapDbRow;
 use crate::{config::CONVERSION_FACTOR, utils::parse_date};
 
-pub type UsdVolume = f64;
-pub type WeightedSum = f64;
+type UsdVolume = f64;
+type WeightedSum = f64;
 type ExchangeRate = f64;
-pub type ExchangeRateMap = HashMap<String, (ExchangeRate, UsdVolume)>;
+pub(crate) type ExchangeRateMap = HashMap<String, (ExchangeRate, UsdVolume)>;
 
 #[derive(Clone, DatabaseDerive)]
 #[with_name("rates")]
 pub(crate) struct RatesDbRow {
-    pub timestamp: u64,
-    pub floatcode: String,
-    pub fltissuer: String,
-    pub rate: f64,
-    pub volume: f64,
+    pub(crate) timestamp: u64,
+    pub(crate) floatcode: String,
+    pub(crate) fltissuer: String,
+    pub(crate) rate: f64,
+    pub(crate) volume: f64,
 }
 
 impl RatesDbRow {
@@ -96,6 +96,8 @@ fn extract_amounts(
 ) -> HashMap<String, (WeightedSum, UsdVolume)> {
     let usdc_swapped: UsdVolume = row.usdc_amnt as f64 / CONVERSION_FACTOR;
     let swap_exchange_rate: f64 = row.numerator as f64 / row.denom as f64;
+
+    // We group asset codes and issues into a single value for DB compatibility
     let floatcoin = format!("{}_{}", row.floatcode, row.fltissuer);
 
     // For XLM swaps, we sometimes get weird values, so we don't include them
@@ -104,10 +106,13 @@ fn extract_amounts(
         counts
             .entry(floatcoin)
             .and_modify(|(floatcoin_total, total_volume)| {
-                // This cannot overflow because the maximum value of f64, 1.8e308,
-                // is ridiculously larger than the maximum value of i64, 9.2e18.
+                // The addition assignment += cannot overflow because the maximum
+                // value of f64, 1.8e308, is ridiculously larger than the maximum
+                // value of i64, 9.2e18.
+                //
                 // The trade-off, though, is that for values larger than 2^53 we
-                // lose precision. This should not be a problem in practice.
+                // lose precision. This should not be a problem for calculating
+                // exchange rates due to large volumes.
                 *floatcoin_total += usdc_swapped * swap_exchange_rate;
                 *total_volume += usdc_swapped;
             })

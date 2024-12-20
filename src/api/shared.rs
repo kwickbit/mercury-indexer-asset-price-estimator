@@ -44,7 +44,6 @@ pub(super) fn query_db(
         .read::<RatesDbRow>()
         .map_err(|_| ExchangeRateError::DatabaseError)?
         .into_iter()
-
         // Maybe it was some blunder during development, but some NaN exchange
         // rates crept into the DB. We filter them out.
         .filter(|row| row.rate.to_string() != "NaN")

@@ -14,12 +14,12 @@ use crate::{
 #[derive(Clone, DatabaseDerive)]
 #[with_name("swaps")]
 pub(crate) struct SwapDbRow {
-    pub creation: u64,
-    pub usdc_amnt: i64,
-    pub floatcode: String,
-    pub fltissuer: String,
-    pub numerator: i64,
-    pub denom: i64,
+    pub(crate) creation: u64,
+    pub(crate) usdc_amnt: i64,
+    pub(crate) floatcode: String,
+    pub(crate) fltissuer: String,
+    pub(crate) numerator: i64,
+    pub(crate) denom: i64,
 }
 
 impl SwapDbRow {
@@ -36,10 +36,10 @@ impl SwapDbRow {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct SwapAsset {
-    pub code: &'static str,
-    pub issuer: &'static str,
-    pub contract: &'static str,
+pub(crate) struct SwapAsset {
+    pub(crate) code: &'static str,
+    pub(crate) issuer: &'static str,
+    pub(crate) contract: &'static str,
 }
 
 impl TryFrom<&Asset> for SwapAsset {
@@ -63,21 +63,21 @@ impl TryFrom<&Asset> for SwapAsset {
 }
 
 #[derive(Debug)]
-pub struct SwapData {
-    pub amount_bought: i64,
-    pub amount_sold: i64,
-    pub asset_bought: Option<SwapAsset>,
-    pub asset_sold: Option<SwapAsset>,
+pub(crate) struct SwapData {
+    pub(crate) amount_bought: i64,
+    pub(crate) amount_sold: i64,
+    pub(crate) asset_bought: Option<SwapAsset>,
+    pub(crate) asset_sold: Option<SwapAsset>,
 }
 
 #[derive(Clone, Debug)]
 pub(crate) struct Swap {
-    pub created_at: Option<u64>,
-    pub usdc_amount: f64,
-    pub floating_asset_code: String,
-    pub floating_asset_issuer: String,
-    pub price_numerator: i64,
-    pub price_denominator: i64,
+    pub(crate) created_at: Option<u64>,
+    pub(crate) usdc_amount: f64,
+    pub(crate) floating_asset_code: String,
+    pub(crate) floating_asset_issuer: String,
+    pub(crate) price_numerator: i64,
+    pub(crate) price_denominator: i64,
 }
 
 impl Display for Swap {
@@ -156,12 +156,12 @@ impl From<&SwapDbRow> for Swap {
 
 #[derive(Clone, DatabaseDerive)]
 #[with_name("soroswaps")]
-pub struct Soroswap {
-    pub swap: String,
+pub(crate) struct Soroswap {
+    pub(crate) swap: String,
 }
 
 impl Soroswap {
-    pub fn save(swap_data: &SwapData) {
+    pub(crate) fn save(swap_data: &SwapData) {
         let asset_bought = swap_data.asset_bought.as_ref().unwrap();
         let asset_sold = swap_data.asset_sold.as_ref().unwrap();
 

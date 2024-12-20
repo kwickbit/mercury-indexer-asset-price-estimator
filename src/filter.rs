@@ -98,8 +98,11 @@ fn swap_from_amounts_and_assets((assets, amounts): (&[ScVal], &[ScVal])) -> Opti
         return None;
     };
 
-    let amount_sold = (((n1.hi as i128) << 64) + n1.lo as i128).try_into().ok()?;
-    let amount_bought = (((n2.hi as i128) << 64) + n2.lo as i128).try_into().ok()?;
+    // Classic network amounts are 64 bits, while Soroswap uses 128. This will
+    // only fail if the most significant 64 bits are not all 0. We accept that
+    // chance of failure because most swaps are assumed to involve smaller amounts.
+    let amount_sold: i64 = (((n1.hi as i128) << 64) + n1.lo as i128).try_into().ok()?;
+    let amount_bought: i64 = (((n2.hi as i128) << 64) + n2.lo as i128).try_into().ok()?;
     let asset_sold = get_swap_asset(get_address_from_scval(&assets[0])?)?;
     let asset_bought = get_swap_asset(get_address_from_scval(&assets[1])?)?;
 

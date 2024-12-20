@@ -1,10 +1,14 @@
+#![warn(missing_docs)]
+
 use serde::{Deserialize, Serialize};
 use zephyr_sdk::EnvClient;
 
 use crate::utils::parse_date;
 
 use super::{
-    shared::{normalize_issuer, parse_timestamp, query_db, ExchangeRateError, NormalizeAssetIssuer},
+    shared::{
+        normalize_issuer, parse_timestamp, query_db, ExchangeRateError, NormalizeAssetIssuer,
+    },
     RatesDbRow,
 };
 
@@ -86,12 +90,62 @@ struct FailedAsset {
 
 type AssetHistoryResult = Result<SuccessfulAsset, FailedAsset>;
 
-#[derive(Debug, Deserialize, Serialize)]
-struct ExchangeRateHistoryResponse {
-    successful_assets: Vec<SuccessfulAsset>,
-    failed_assets: Vec<FailedAsset>,
-}
-
+/// Retrieves historical USD exchange rates for multiple assets at specific
+/// transaction dates.
+///
+/// For each asset, returns exchange rates at specified transaction dates and
+/// a final rate, useful for calculating unrealized gains in accounting reports.
+/// The final date must be after all transaction dates.
+///
+/// # Request Format
+/// ```json
+/// {
+///     "assets": [{
+///         "asset": {
+///             "asset_code": "XLM",
+///             "asset_issuer": "optional_issuer"
+///         },
+///         "transaction_dates": ["2024-01-01T12:00:00", "2024-01-02T12:00:00"],
+///         "unrealized_date": "2024-01-03T12:00:00"
+///     }]
+/// }
+/// ```
+///
+/// # Response Format
+/// On success (status 200):
+/// ```json
+/// {
+///     "status": 200,
+///     "data": {
+///         "successful_assets": [{
+///             "asset": {
+///                 "asset_code": "XLM",
+///                 "asset_issuer": "Native"
+///             },
+///             "transaction_rates": [{
+///                 "transaction_date": "2024-01-01T12:00:00",
+///                 "exchange_rate_date": "2024-01-01T11:55:33",
+///                 "exchange_rate": "0.12345"
+///             }, {
+///                 "transaction_date": "2024-01-02T12:00:00",
+///                 "exchange_rate_date": "2024-01-02T11:04:33",
+///                 "exchange_rate": "0.13370"
+///             }],
+///             "unrealized_rate": {
+///                 "transaction_date": "2024-01-03T12:00:00",
+///                 "exchange_rate_date": "2024-01-03T11:30:33",
+///                 "exchange_rate": "0.14159"
+///             }
+///         }],
+///         "failed_assets": []
+///     }
+/// }
+/// ```
+///
+/// # Errors
+/// - 400: Empty request, missing transactions, invalid date format, invalid date order, or missing issuer
+/// - 404: No exchange rates found
+/// - 500: Database error
 #[no_mangle]
 pub extern "C" fn get_exchange_rate_history() {
     let client = EnvClient::empty();
@@ -255,13 +309,13 @@ fn build_transaction_rates(
 }
 
 fn build_ok_response(data: Vec<AssetHistoryResult>) -> serde_json::Value {
-    let (assets, failed_assets): (Vec<_>, Vec<_>) =
+    let (successful_assets, failed_assets): (Vec<_>, Vec<_>) =
         data.into_iter().partition(|asset| asset.is_ok());
 
     serde_json::json!({
         "status": 200,
         "data": {
-            "assets": assets.iter().map(|asset| asset.as_ref().unwrap()).collect::<Vec<_>>(),
+            "successful_assets": successful_assets.iter().map(|asset| asset.as_ref().unwrap()).collect::<Vec<_>>(),
             "failed_assets": failed_assets.iter().map(|asset| asset.as_ref().unwrap()).collect::<Vec<_>>(),
         }
     })
