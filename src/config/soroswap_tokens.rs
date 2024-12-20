@@ -1,6 +1,6 @@
 use crate::db::swap::SwapAsset;
 
-pub const SOROSWAP_TOKENS: [SwapAsset; 57] = [
+pub(crate) const SOROSWAP_TOKENS: [SwapAsset; 57] = [
     SwapAsset {
         code: "XRP",
         issuer: "GBXRPL45NPHCVMFFAYZVUVFFVKSIZ362ZXFP7I2ETNQ3QKZMFLPRDTD5",

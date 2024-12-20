@@ -1,5 +1,5 @@
 // We don't include transactions involving known scam issuers
-pub const SCAM_ADDRESSES: [&str; 13049] = [
+pub(crate) const SCAM_ADDRESSES: [&str; 13049] = [
     // These addresses are taken from the StellarExpert data
     "GA223OFHVKVAH2NBXP4AURJRVJTSOVHGBMKJNL6GRJWNN4SARVGSITYG",
     "GA22TJ754NFQ4BHJWOWXO67XZ44LNPW25Y6GLZDAWT4IQ67KWRDYNNJT",

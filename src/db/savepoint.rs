@@ -8,5 +8,5 @@ use zephyr_sdk::{prelude::*, DatabaseDerive, EnvClient};
  * the exchange rates. This window is defined in the config file.
  */
 pub(crate) struct Savepoint {
-    pub savepoint: u64,
+    pub(crate) savepoint: u64,
 }

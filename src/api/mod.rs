@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 pub(crate) mod extras;
 pub(crate) mod rates_history;
 pub(crate) mod shared;
@@ -30,10 +32,47 @@ impl NormalizeAssetIssuer for ExchangeRateRequest {
 
 struct ValidatedRequest {
     asset_code: String,
-    asset_issuer: Option<String>,
-    timestamp: Option<i64>,
+    asset_issuer: Option<String>, // None means the asset is native (XLM)
+    timestamp: Option<i64>,       // Seconds since the Unix epoch; None means that the most recent
+                                  // exchange rates will be retrieved
 }
 
+/// Retrieves the USD exchange rate for a given asset.
+///
+/// Returns the latest exchange rate for the specified asset, up to an optional
+/// given time. For non-native assets (not XLM), an issuer may be specified;
+/// otherwise, all assets with the same code are retrieved.
+///
+/// # Request Format
+/// ```json
+/// {
+///     "asset_code": "XLM",
+///     "asset_issuer": "optional_issuer",
+///     "date": "optional_ISO8601_timestamp"  // e.g. "2024-01-01T00:00:00"
+/// }
+/// ```
+///
+/// # Response Format
+/// On success (status 200):
+/// ```json
+/// {
+///     "status": 200,
+///     "data": [{
+///         "asset_code": "XLM",
+///         "asset_issuer": "Native",
+///         "base_currency": "USD",
+///         "rate_date_time": "2023-12-31T23:58:30",
+///         "exchange_rate": "1.2345",
+///         "soroswap_certified_asset": true,
+///         "volume": "10000.0"
+///     }]
+/// }
+/// ```
+///
+/// # Errors
+/// - 400: Invalid date format
+/// - 404: No exchange rate found
+/// - 500: Database error
 #[no_mangle]
 pub extern "C" fn get_exchange_rate() {
     let client = EnvClient::empty();
