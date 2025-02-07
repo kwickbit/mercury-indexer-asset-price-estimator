@@ -4,6 +4,17 @@
 
 This API provides USD exchange rates for assets on the Stellar network, calculated from USDC swaps. Exchange rates are computed over 60-minute windows, with USDC assumed to be worth exactly $1. All rates are expressed in terms of 1 USD (e.g., a rate of 28 means $1 buys 28 units of the asset).
 
+## Installation
+
+After cloning this repository, put the following environment variables in your `.env` file:
+
+```
+  MERCURY_BACKEND_ENDPOINT
+  MERCURY_GRAPHQL_ENDPOINT
+  MERCURY_JWT
+  MERCURY_API_KEY
+```
+
 ## API Reference
 
 ### Endpoint
