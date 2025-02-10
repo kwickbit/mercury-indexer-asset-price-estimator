@@ -23,10 +23,10 @@ done
 # Set the working directory based on reset mode - useful during development
 # The basic version of the code does nothing but log the current sequence number.
 if [ "$reset_mode" = true ]; then
-    cd "$BASE_DIR/basic" || exit 1
+    cd "$BASE_DIR/../basic" || exit 1
     echo -e "\e[1;93mWarning: Running in reset mode from the 'basic' directory.\e[0m"
 else
-    cd "$BASE_DIR/indexer" || exit 1
+    cd "$BASE_DIR" || exit 1
 fi
 
 # Warn user if deploying to both networks
@@ -54,7 +54,7 @@ fi
 
 # There have been instances of false positives on `deployment_success`.
 # The logs from the CLI itself are reliable.
-cd "$BASE_DIR/indexer"
+cd "$BASE_DIR" || exit
 if [ "$deployment_success" = true ]; then
 echo -e "\e[30;47mDeployment completed at $(date)\e[0m"
 fi

@@ -3,11 +3,11 @@
 # Back up the code before deploying, so we know what code is currently running.
 backup_and_deploy() {
     local network=$1
-    local deploy_dir="$BASE_DIR/indexer/deploy/$network"
+    local deploy_dir="$BASE_DIR/deploy/$network"
 
     mkdir -p "$deploy_dir"
     rm -rf "$deploy_dir"/*
-    cp -R "$BASE_DIR/indexer/src"/* "$deploy_dir"
+    cp -R "$BASE_DIR/src"/* "$deploy_dir"
 
     if [ "$network" = "test" ]; then
         deploy_to_network "testnet"
